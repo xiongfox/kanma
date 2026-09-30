@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="H4EW5WN8jZFwl2Ki91k9HB">
+<head data-page-node-id="DqlIgsjBHsnHGwVHuha3hN">
+  <meta charset="UTF-8" data-page-node-id="VGuQlQJuCImKcMvLCKJNjW" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="okH32IK5CadShLOPaslYY6" />
+  <title>勘码 KanMa · 评审中心</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --primary: #2563eb;
+      --primary-d: #1d4ed8;
+      --danger: #dc2626;
+      --ok: #16a34a;
+      --label-w: 148px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", sans-serif;
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 56px; }
+    header.top {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+    }
+    header.top h1 { font-size: 21px; margin: 0; font-weight: 700; }
+    header.top .v { color: var(--muted); font-size: 13px; }
+    header.top .top-ops { margin-left: auto; display: flex; gap: 10px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px 22px; box-shadow: 0 1px 2px rgba(15,23,42,.04);
+    }
+    .card > h2 { font-size: 15px; margin: 0 0 16px; font-weight: 600; }
+    button {
+      border: none; border-radius: 8px; padding: 9px 18px; font-size: 14px;
+      font-weight: 600; cursor: pointer; transition: background .15s;
+    }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-d); }
+    .btn-ghost { background: #eef2f7; color: #334155; }
+    .btn-ghost:hover { background: #e2e8f0; }
+    .btn-sm { padding: 6px 12px; font-size: 12.5px; font-weight: 500; }
+    .btn-danger { background: #fee2e2; color: #991b1b; }
+    .btn-danger:hover { background: #fecaca; }
+
+    /* ---------- 后台评审横幅 ---------- */
+    .bg-banner {
+      display: none; align-items: center; gap: 10px;
+      margin-bottom: 10px; padding: 9px 12px;
+      border: 1px solid #fde68a; border-radius: 8px;
+      background: #fffbeb; color: #92400e; font-size: 13px; line-height: 1.5;
+    }
+    .bg-banner.show { display: flex; }
+    .bg-banner .bg-dot {
+      flex: none; width: 8px; height: 8px; border-radius: 50%;
+      background: #f59e0b; animation: bgpulse 1.2s ease-in-out infinite;
+    }
+    @keyframes bgpulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+    .bg-banner a { color: #92400e; font-weight: 600; text-decoration: underline; white-space: nowrap; }
+    .bg-banner .bg-spacer { margin-left: auto; }
+    .bg-banner .bg-time { font-variant-numeric: tabular-nums; opacity: .8; white-space: nowrap; }
+    /* 复用 .hint 的灰字，但要抵消它的块级负边距（否则横幅内错位） */
+    .bg-banner .hint { margin: 0; display: inline; font-size: 12px; }
+
+    /* ---------- 主体：项目列表 | 报告列表 ---------- */
+    .main {
+      display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+      gap: 18px; align-items: start;
+    }
+    @media (max-width: 940px) { .main { grid-template-columns: 1fr; } }
+
+    .proj-card { padding: 16px 14px; }
+    .pc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .pc-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+    .pc-head .cnt { color: var(--muted); font-size: 12.5px; }
+    .pc-head button { margin-left: auto; padding: 5px 12px; font-size: 12.5px; }
+
+    .proj {
+      border: 1px solid var(--border); border-left: 3px solid var(--border);
+      border-radius: 9px; padding: 11px 13px; margin-bottom: 10px; cursor: pointer;
+      background: #fff; transition: border-color .15s, background .15s;
+    }
+    .proj:hover { border-color: #cbd5e1; background: #fbfdff; }
+    .proj.active { border-color: var(--primary); border-left-color: var(--primary);
+      background: #f5f8ff; }
+    .proj .row1 { display: flex; align-items: center; gap: 8px; }
+    .proj .name { font-weight: 600; font-size: 14.5px; flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .proj .meta { color: var(--muted); font-size: 12.5px; margin-top: 5px; word-break: break-all; }
+    .proj .meta code { background: #f1f5f9; padding: 1px 6px; border-radius: 5px; }
+    .proj .ops { display: flex; gap: 7px; margin-top: 10px; }
+    .empty { color: var(--muted); font-size: 13px; padding: 10px 2px; }
+    .badge { font-size: 11px; padding: 1px 8px; border-radius: 999px; font-weight: 600; }
+    .badge.run { background: #fef3c7; color: #92400e; }
+    .badge.done { background: #dcfce7; color: #166534; }
+
+    /* ---------- 项目卡片：评审状态指示灯 ----------
+       未评审(灰) / 评审中(琥珀·脉冲) / 已完成(绿) / 评审失败(红) */
+    .badge.ind { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .badge.ind > .dot {
+      flex: none; width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor;
+    }
+    .badge.idle { background: #f1f5f9; color: #64748b; }
+    .badge.run.ind > .dot { animation: dotpulse 1.2s ease-in-out infinite; }
+    .badge.err { background: #fee2e2; color: #991b1b; }
+    @keyframes dotpulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .35; transform: scale(.72); }
+    }
+
+    /* 报告列表 */
+    .rep-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+    .rep-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+    .rep-head .rep-count { color: var(--muted); font-size: 12.5px; }
+    .rep-head .rep-ops { margin-left: auto; display: flex; gap: 8px; }
+    .rep-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .rep-table th, .rep-table td {
+      text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .rep-table th { color: var(--muted); font-weight: 500; font-size: 12px; white-space: nowrap; }
+    .rep-table tbody tr:hover { background: #f8fafc; }
+    .rep-table td.nowrap { white-space: nowrap; }
+    .rep-proj { font-weight: 600; }
+    .rep-proj small { display: block; color: var(--muted); font-weight: 400; font-size: 11.5px; }
+    .rep-time { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .rep-link { color: var(--primary); text-decoration: none; font-weight: 500; }
+    .rep-link:hover { text-decoration: underline; }
+    .rep-nodata { color: var(--muted); font-size: 13px; padding: 6px 2px; }
+    .h-badge { font-size: 11px; padding: 1px 7px; border-radius: 999px; font-weight: 600; }
+    .h-badge.ok { background: #dcfce7; color: #166534; }
+    .h-badge.err { background: #fee2e2; color: #991b1b; }
+    .h-badge.run { background: #fef3c7; color: #92400e; }
+    .h-verdict { font-weight: 600; color: var(--primary); }
+    @media (max-width: 760px) {
+      .rep-table thead { display: none; }
+      .rep-table tr { display: block; border-bottom: 1px solid var(--border); padding: 6px 0; }
+      .rep-table td { display: block; border: none; padding: 3px 10px; }
+    }
+
+    /* ---------- 弹窗 ---------- */
+    .mask {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, .45);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 40px 16px; overflow: auto; z-index: 50;
+    }
+    .mask[hidden] { display: none; }
+    .modal {
+      background: #fff; border-radius: 14px; width: min(760px, 100%);
+      box-shadow: 0 18px 50px rgba(15, 23, 42, .22);
+      display: flex; flex-direction: column; max-height: calc(100vh - 80px);
+    }
+    .modal-head {
+      display: flex; align-items: center; gap: 10px; padding: 16px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
+    .modal-head .x {
+      margin-left: auto; background: transparent; color: var(--muted);
+      font-size: 20px; line-height: 1; padding: 2px 8px; font-weight: 400;
+    }
+    .modal-head .x:hover { background: #f1f5f9; color: var(--text); }
+    .modal-body { padding: 18px 22px 4px; overflow: auto; }
+    .modal-foot {
+      display: flex; align-items: center; gap: 10px; padding: 14px 22px;
+      border-top: 1px solid var(--border);
+    }
+    .modal-foot .grow { flex: 1; }
+    .field { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .field > label {
+      width: var(--label-w); flex: none; text-align: right;
+      color: #334155; font-weight: 500; white-space: nowrap;
+    }
+    .field > label .req { color: var(--danger); margin-left: 2px; }
+    .field > input {
+      flex: 1; min-width: 0; padding: 8px 11px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 14px; color: var(--text); background: #fff;
+    }
+    .field > input:focus { outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+    .field > .note { width: var(--label-w); flex: none; color: var(--muted);
+      font-size: 12px; text-align: right; }
+    .hint { color: var(--muted); font-size: 12px; margin: -6px 0 14px;
+      padding-left: calc(var(--label-w) + 12px); }
+    .msg { font-size: 13px; min-height: 18px; }
+    .msg.ok { color: var(--ok); }
+    .msg.err { color: var(--danger); }
+    .repo-block {
+      border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px 4px;
+      margin-bottom: 14px; background: #fbfdff;
+    }
+    .repo-head { display: flex; align-items: center; justify-content: space-between;
+      margin: 2px 0 10px; }
+    .repo-head .idx { font-weight: 600; color: #334155; font-size: 13.5px; }
+    .repo-head button { padding: 3px 10px; font-size: 12px; font-weight: 500;
+      background: #fee2e2; color: #991b1b; }
+    .repo-head button:hover { background: #fecaca; }
+    #addRepo { margin: 0 0 14px; padding: 7px 14px; }
+    .edit-bar {
+      display: flex; align-items: center; gap: 8px; margin: 0 0 14px; padding: 9px 12px;
+      border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe;
+      color: #1e40af; font-size: 13px;
+    }
+
+    /* ---------- 大模型设置：本地 / 云端 ---------- */
+    .llm-card { margin-bottom: 18px; padding: 16px 22px; }
+    .llm-card.collapsed .llm-body { display: none; }
+    .llm-head { display: flex; align-items: center; gap: 12px; }
+    .llm-head h2 { margin: 0; flex: none; font-size: 15px; font-weight: 600; }
+    .llm-head .llm-state { margin-left: auto; }
+    .llm-toggle {
+      padding: 4px 12px; font-size: 12.5px; font-weight: 500;
+      background: #eef2f7; color: #334155; border-radius: 999px;
+    }
+    .llm-toggle:hover { background: #e2e8f0; }
+    .llm-top {
+      display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+      margin: 0 0 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
+    }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden; }
+    .seg button {
+      border-radius: 0; background: #fff; color: #475569; font-weight: 500;
+      padding: 8px 22px; border-right: 1px solid var(--border);
+    }
+    .seg button:last-child { border-right: none; }
+    .seg button:hover { background: #f1f5f9; }
+    .seg button.on { background: var(--primary); color: #fff; }
+    .seg button.on:hover { background: var(--primary-d); }
+    .llm-state { color: var(--muted); font-size: 13px; }
+    .llm-state b { color: var(--text); font-weight: 600; }
+    .llm-state .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--muted); margin-right: 6px; vertical-align: 1px; }
+    .llm-state .dot.on { background: var(--ok); }
+    .llm-state .dot.off { background: #f59e0b; }
+    .switch { display: inline-flex; align-items: center; gap: 6px; color: #334155;
+      font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer; }
+    .switch input { width: 15px; height: 15px; accent-color: var(--primary); }
+    .llm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 26px; }
+    @media (max-width: 820px) { .llm-grid { grid-template-columns: 1fr; } }
+    .llm-tip { color: var(--muted); font-size: 12px; margin: 0 0 14px; }
+    /* ---------- 系统设置：全局生效的开关 ---------- */
+    .sys-card { margin-bottom: 18px; padding: 16px 22px; }
+    .sys-card.collapsed .sys-body { display: none; }
+    .sys-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .sys-head h2 { margin: 0; flex: none; font-size: 15px; font-weight: 600; }
+    .sys-state { margin-left: auto; color: var(--muted); font-size: 13px; }
+    .sys-toggle {
+      padding: 4px 12px; font-size: 12.5px; font-weight: 500;
+      background: #eef2f7; color: #334155; border-radius: 999px; white-space: nowrap;
+    }
+    .sys-toggle:hover { background: #e2e8f0; }
+    .sys-actions { display: flex; gap: 10px; padding-left: calc(var(--label-w) + 12px); }
+    .llm-body .actions { display: flex; gap: 10px; padding-left: 0; }
+    .probe { margin-top: 12px; font-size: 13px; }
+    .probe .p-item {
+      display: flex; align-items: center; gap: 12px; padding: 7px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+    .probe .p-name { font-weight: 600; min-width: 110px; }
+    .probe .p-url { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px; }
+    .probe .p-ok { color: var(--ok); font-weight: 600; }
+    .probe .p-no { color: var(--muted); }
+    .probe button { padding: 4px 12px; font-size: 12px; font-weight: 500; margin-left: auto; }
+
+    .toast {
+      position: fixed; right: 20px; bottom: 20px; background: #0f172a; color: #fff;
+      padding: 10px 16px; border-radius: 8px; font-size: 13px; opacity: 0;
+      transition: opacity .25s; pointer-events: none; z-index: 90;
+    }
+    .toast.show { opacity: .95; }
+  </style>
+</head>
+<body data-page-node-id="J15wVmenA2L6ift6BOy3l2">
+  <div class="wrap" data-page-node-id="blnKaba5ZR70j26FvBihMd">
+    <header class="top" data-page-node-id="yKJMlRsS8TdDVnlIw2j28x">
+      <h1 data-page-node-id="6PRaTFEwfEy78WVoMA4SNh">勘码 KanMa</h1>
+      <span class="v" data-page-node-id="XxujcBEw4WGPnaAK6RkwHF">企业级代码 Review Agent · v{{ version }}</span>
+      <div class="top-ops" data-page-node-id="rTntDZJr04jW8GdHvSWkNL">
+        <button type="button" class="btn-ghost" id="btnReload" data-page-node-id="MCGhmXGEcg3GHfXsOegWCC">刷新</button>
+        <button type="button" class="btn-primary" id="btnNew" data-page-node-id="zjFWxWUpGvKtxrviIBo1l0">＋ 新增项目</button>
+      </div>
+    </header>
+
+    {# 模型已配置且已启用时服务端先收起，避免 JS 生效前的展开闪烁（JS 会按用户选择覆盖） #}
+    {% set llm_ready = llm.enabled and llm.active and llm.active.ready %}
+    <section class="card llm-card{% if llm_ready %} collapsed{% endif %}" id="llmCard" data-page-node-id="mXaJTyVzEBOxBzR7zg8JVf">
+      <div class="llm-head" data-page-node-id="gytjgF5sjabEOEHaanO9Ep">
+        <h2 data-page-node-id="F1RHrbqRIM4qKw2ANsXKqT">大模型设置</h2>
+        <div class="llm-state" data-page-node-id="tampccfeAZezIYKdXtU9uM"><span class="dot" id="llmDot" data-page-node-id="3o99MuKptrjWvJhiEijERY"></span>当前生效：<b id="llmActive" data-page-node-id="SCCpzrxZsbhaFyq8Tzf5iw">—</b></div>
+        <button type="button" class="llm-toggle" id="llmToggle" data-page-node-id="nbj4wLwMxec59fO34iSFAK">{% if llm_ready %}展开设置{% else %}收起设置{% endif %}</button>
+      </div>
+      <div class="llm-body" id="llmBody" data-page-node-id="VTaLlNCvGvtyF00YGVqGUV">
+        <div class="llm-top" data-page-node-id="YAMhPnDEtNN8frbmjsbWa4">
+          <div class="seg" id="llmSeg" data-page-node-id="djmBujyza3Eyfhcv0bN0wl">
+            <button type="button" data-llmmode="local" data-page-node-id="dECDASjMCXBqVO2KObujxg">本地模式</button>
+            <button type="button" data-llmmode="cloud" data-page-node-id="l0WVYvHssalaphB1QhrTJh">云端模式</button>
+          </div>
+          <label class="switch" data-page-node-id="t66k4IZeOmXyisvfEo8T78"><input type="checkbox" id="llmEnabled" data-page-node-id="EhGO63Gq7AxGS3LMFppzG9" /> 启用大模型</label>
+          <button type="button" class="llm-toggle" id="llmCollapse" data-page-node-id="8sWfLfvVFNqxFttsSxJSaf">收起</button>
+        </div>
+
+        <div class="llm-grid" id="llmFields" data-page-node-id="KSzWGVZFuJGputh7fh7CcI"><!-- 按模式动态渲染 --></div>
+        <div class="llm-tip" id="llmTip" data-page-node-id="yc5w0tqbHpkrGdGMWUfcJP"></div>
+
+        <div class="actions" data-page-node-id="hhnEC5PQyI9kxWrSfQ0RGb">
+          <button type="button" class="btn-primary" id="llmSave" data-page-node-id="yO0zQv7JA6GYeWKzNCM6bf">保存并切换</button>
+          <button type="button" class="btn-ghost" id="llmTest" data-page-node-id="3ZZAMvG1mj8IIM9pZqi5Se">测试连接</button>
+          <button type="button" class="btn-ghost" id="llmProbe" data-page-node-id="xmTDWELM3mJgoItRBWZaRz">探测本地服务</button>
+        </div>
+        <div id="llmMsg" class="msg" data-page-node-id="Gx0aQ65YfB6MvVGSQnCzcP"></div>
+        <div id="probeResult" class="probe" data-page-node-id="VdX1sPq8wmxEODFR4hGTeD"></div>
+      </div>
+    </section>
+
+    <!-- 系统设置：步骤 2 并发度阈值等全局开关（对所有评审项目生效），可收起 -->
+    <section class="card sys-card" id="sysCard" data-page-node-id="sysCard001">
+      <div class="sys-head" data-page-node-id="sysHead001">
+        <h2 data-page-node-id="sysTitle001">系统设置</h2>
+        <span class="sys-state" id="sysState" data-page-node-id="sysState001"></span>
+        <button type="button" class="sys-toggle" id="sysToggle" data-page-node-id="sysToggle001">收起</button>
+      </div>
+      <div class="sys-body" id="sysBody" data-page-node-id="sysBody001">
+        <div class="field" data-page-node-id="sysField001">
+          <label for="staticParallel" data-page-node-id="sysLbl001">静态审查并发度</label>
+          <input id="staticParallel" type="number" min="0" step="1" placeholder="默认 2（0 = 不限制）" data-page-node-id="sysInput001" />
+          <span class="note" data-page-node-id="sysNote001">0 = 不限制</span>
+        </div>
+        <div class="hint" data-page-node-id="sysHint001">
+          步骤 2 按规约章节并发打给模型。系统默认两路并发（2），本地模型（Ollama / vLLM 等）
+          压不住可调低为 1，云端强模型可设 0 放开到全量并发。全局生效，对所有评审项目共享同一道闸门。
+        </div>
+        <div class="sys-actions" data-page-node-id="sysAct001">
+          <button type="button" class="btn-primary" id="sysSave" data-page-node-id="sysSave001">保存系统设置</button>
+        </div>
+        <div id="sysMsg" class="msg" data-page-node-id="sysMsg001"></div>
+      </div>
+    </section>
+
+    <div class="main" data-page-node-id="1KO2bAE1mhmFoQGF7ibEgb">
+      <!-- 左：项目列表 -->
+      <section class="card proj-card" data-page-node-id="4FHnO4osD40QbVITnU2mJq">
+        <div class="pc-head" data-page-node-id="TbQGTqyJ6X12HYYJJ737AC">
+          <h2 data-page-node-id="ogK5okCVxDBlA2WAnhOtdN">项目</h2>
+          <span class="cnt" id="projCount" data-page-node-id="v4XtxoRm1BmLJ3ZJW5nOy7"></span>
+          <button type="button" class="btn-ghost" id="btnNew2" data-page-node-id="C6tDsC0gnMChzI4WjO6Hhf">新增</button>
+        </div>
+        <div id="projList" data-page-node-id="A6l28MnT7gSdh6qbcBco13">
+          {% if projects %}
+            {% for p in projects %}
+            <div class="proj" data-slug="{{ p.slug }}" data-name="{{ p.name }}" data-page-node-id="PJu3HcTgU7sQXWgSVF1Jur">
+              <div class="row1" data-page-node-id="NfyktSsRqmsdKcuHGc3lUt">
+                <span class="name" data-page-node-id="xJT3kn0pfIO0e8NV7TCBy3">{{ p.name }}</span>
+                <span class="badge" data-jobbadge="{{ p.slug }}" data-page-node-id="x9PYYvxdd2mNlXYAXq9cJ7"></span>
+              </div>
+              <div class="meta" data-page-node-id="CuK37CdZXBxF0ndzwNxYiD">
+                {% for r in p.repos %}
+                <div data-page-node-id="XHBzULuR314BybzNpRftdw">工程{{ loop.index }}{% if r.name %} · {{ r.name }}{% endif %}：<code data-page-node-id="6yhnZLB5xJ8qdbhKGKJD3J">{{ r.git_url }}</code><br  data-page-node-id="tA17zxQaQFV7XHK8veOfKL"/>
+                分支：<code data-page-node-id="vXHin9vW0NktrfbP2FWeXj">{{ r.branch }}</code>{% if r.base %} · 基线 <code data-page-node-id="hy7tI4W1NqzMVh5DhqI1i9">{{ r.base }}</code>{% endif %} · {{ r.start_time }} ~ {{ r.end_time }}<br  data-page-node-id="8wGpZALV6AFWyJrv6jQgF3"/></div>
+                {% endfor %}
+                {% if p.requirement_doc %}需求文档：<code data-page-node-id="PcgBkVa4WRrlHbIl3T14ag">{{ p.requirement_doc }}</code>{% else %}需求文档：未指定（降级）{% endif %}
+              </div>
+              <div class="ops" data-page-node-id="6VifRQY6yiQ7R1SriKg7M6">
+                <button class="btn-primary btn-sm" data-run="{{ p.slug }}" data-page-node-id="Beyjc0NKyO5oc8TkqoD2SQ">立即评审</button>
+                <button class="btn-ghost btn-sm" data-edit="{{ p.slug }}" data-page-node-id="EZIpm8nhq9RRnKvL6fi4Fh">编辑</button>
+                <button class="btn-danger btn-sm" data-del="{{ p.slug }}" data-page-node-id="JbSu7rNl6ntxCSBhZBfeFO">删除</button>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty" data-page-node-id="VO7loLl9ZqOE2iyjfwOmBS">还没有项目。点右上角「+ 新增项目」录入第一个评审项目。</div>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- 右：选中项目的评审报告列表 -->
+      <section class="card" data-page-node-id="7dnocnWUOvaHDe672NBxwn">
+        <div class="rep-head" data-page-node-id="0Wi0AsxypmZ6u9b7r1MlSW">
+          <h2 id="repTitle" data-page-node-id="KfPXrP1FzYbvzN8AOXCU0k">全部评审报告</h2>
+          <span class="rep-count" id="repCount" data-page-node-id="07JPxvKDOKeRT29xqMfiqB"></span>
+          <div class="rep-ops" data-page-node-id="s27Q2ZwLpHnZsT67nFkwVQ">
+            <button type="button" class="btn-primary btn-sm" id="repRun" style="display:none" data-page-node-id="7HAOS7II0pdaFzNLyhWdAN">再次评审</button>
+            <button type="button" class="btn-danger btn-sm" id="repClear" style="display:none" data-page-node-id="pL7q0tF1rWjxmK2bVc8yZ3">清空报告</button>
+            <button type="button" class="btn-ghost btn-sm" id="repBack" style="display:none" data-page-node-id="OLRouvprekMryX8l8vWpr7">← 返回全部</button>
+            <button type="button" class="btn-ghost btn-sm" id="repRefresh" data-page-node-id="GaTKikkjlH1ErAuvGcsJnp">刷新</button>
+          </div>
+        </div>
+        <div id="bgBanner" class="bg-banner" data-page-node-id="eB8kRn2mVcQxLpT4yW6zA9">
+          <span class="bg-dot"></span>
+          <span id="bgText"></span>
+          <span class="bg-spacer"></span>
+          <span class="bg-time" id="bgTime"></span>
+          <a href="#" id="bgLink">查看进度</a>
+        </div>
+        <div id="repList" data-page-node-id="wsJEMkjGBz0TWK8cvW6xd6"><div class="rep-nodata" data-page-node-id="OXeSvNNbmAWZZADpxwGhpV">加载中…</div></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- 新增 / 编辑项目弹窗 -->
+  <div class="mask" id="mask" hidden data-page-node-id="XSlodENnZ4BB9PltQWL1DE">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" data-page-node-id="wxOKdBajf7NIKYDB9jUqOa">
+      <div class="modal-head" data-page-node-id="UKxCKH0GKte7zqISNbwMyx">
+        <h3 id="modalTitle" data-page-node-id="YweizOxguNYF0Bzu7nKUO5">新增项目</h3>
+        <button type="button" class="x" id="modalClose" aria-label="关闭" data-page-node-id="sWysWk2etQ5O8HBlVgQJwy">×</button>
+      </div>
+      <div class="modal-body" data-page-node-id="RIHkJ1AX66EKgGDPl66yJl">
+        <div id="editBar" class="edit-bar" style="display:none" data-page-node-id="exJXeqtnCA1Fa3M8TwEQKP"></div>
+        <form id="form" autocomplete="off" data-page-node-id="WO4RXDmC1LUi8CaQpLhReq">
+          <div class="field" data-page-node-id="SlbhBGLjROTMroHm2iAjdp">
+            <label for="name" data-page-node-id="QkKyktVzEd94YeMPGWcRsD">项目名称<span class="req" data-page-node-id="XalL7s18DhDq4Hjp0mAWzL">*</span></label>
+            <input id="name" name="name" placeholder="如 order 服务需求评审" required data-page-node-id="GadsNA7sxDwYWFx4EtMk3Q" />
+          </div>
+
+          <div id="repos" data-page-node-id="nG7f0W5wxUYQiqxoRUNGHd"><!-- 源码工程列表（可增删） --></div>
+          <button type="button" class="btn-ghost" id="addRepo" data-page-node-id="OFjKD8ZwPUPyTgIFuOYQ7S">＋ 添加源码工程</button>
+
+          <div class="field" data-page-node-id="ghb4bEoJNdESExgfJqgHQ4">
+            <label for="requirement_doc" data-page-node-id="BtTEr90v9vBFFdJGZ8vwx2">需求开发文档</label>
+            <input id="requirement_doc" name="requirement_doc" placeholder="/data/docs/需求.md（服务器本地路径，可选）" data-page-node-id="T2mpLeIlz9tFHm6ZHoJArV" />
+            <span class="note" data-page-node-id="d55kPuCEAyytehn6H91cEh">本地路径</span>
+          </div>
+          <div class="hint" data-page-node-id="0MMVZJBzAkIEZiCOZQ2wjA">填写服务器可访问的绝对路径；留空则进入需求缺失的降级评审。</div>
+          <div class="field" data-page-node-id="CaAhL5EyDYqFIbAshFmBjf">
+            <label for="workdir" data-page-node-id="cjMXztvW6wvERVE1fi2w29">工作区目录</label>
+            <input id="workdir" name="workdir" placeholder=".kanma（可选）" data-page-node-id="kIarYDXFZIv24B8y9gCMoS" />
+            <span class="note" data-page-node-id="anCdi3uxJWW4IEYuPNjfK7">可选</span>
+          </div>
+
+          <div class="field" data-page-node-id="MvnPath123">
+            <label for="maven_path">Maven 安装路径</label>
+            <input id="maven_path" name="maven_path" placeholder="/opt/maven/bin/mvn（本机未安装 Maven 时可指定）" />
+            <span class="note">可选</span>
+          </div>
+          <div class="field" data-page-node-id="MvnConf456">
+            <label for="maven_conf">Maven settings.xml 路径</label>
+            <input id="maven_conf" name="maven_conf" placeholder="/opt/maven/conf/settings.xml（可选）" />
+            <span class="note">可选</span>
+          </div>
+          <div class="hint" data-page-node-id="MvnHint789">当项目使用 Maven 构建但本机未安装 Maven 时，填写安装路径可解决"未检测到可用的 Maven/Gradle 工具链"问题。</div>
+        </form>
+      </div>
+      <div class="modal-foot" data-page-node-id="MV13F0EFArIuWxBGYhtGnt">
+        <span id="msg" class="msg grow" data-page-node-id="WD3bS6MAcrkSjNJzEkFxaO"></span>
+        <button type="button" class="btn-ghost" id="cancelBtn" data-page-node-id="ByEcLKccRICTapM4Okg458">取消</button>
+        <button type="submit" class="btn-primary" id="submitBtn" form="form" data-page-node-id="XRTZawAmn87EEiSCXmAbqa">保存项目</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" data-page-node-id="yxJfWW6sm1H0lCFifCFYpu"></div>
+
+  <script>
+    const $ = (s, r = document) => r.querySelector(s);
+    const msg = $("#msg");
+    let repoSeq = 0;
+    let editingSlug = null;      // 非空表示弹窗处于编辑态
+    let selectedSlug = null;     // 右侧报告列表当前聚焦的项目
+    let PROJECTS = [];           // 项目列表缓存（用于 slug -> 项目名）
+
+    function toast(text) {
+      const t = $("#toast");
+      t.textContent = text; t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2200);
+    }
+    function setMsg(text, kind) {
+      msg.textContent = text; msg.className = "msg grow " + (kind || "");
+    }
+    function esc(s) {
+      return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    }
+    function toLocal(dt) {
+      const d = dt || new Date(Date.now() - 7 * 864e5);
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function fmtDur(sec) {
+      if (sec === null || sec === undefined) return "";
+      if (sec < 60) return `${sec}s`;
+      return `${Math.floor(sec / 60)}m${String(sec % 60).padStart(2, "0")}s`;
+    }
+    function nameOf(slug) {
+      const p = PROJECTS.find((x) => x.slug === slug);
+      return p ? p.name : slug;
+    }
+
+    /* ---------- 源码工程录入块 ---------- */
+    function repoBlock() {
+      repoSeq += 1;
+      const block = document.createElement("div");
+      block.className = "repo-block";
+      block.innerHTML = `
+        <div class="repo-head">
+          <span class="idx">源码工程 ${repoSeq}</span>
+          <button type="button" class="rmRepo">移除</button>
+        </div>
+        <div class="field">
+          <label>工程名</label>
+          <input class="r-name" placeholder="如 order-service（可选，缺省从地址推导）" />
+          <span class="note">可选</span>
+        </div>
+        <div class="field">
+          <label>仓库地址<span class="req">*</span></label>
+          <input class="r-git" placeholder="git@git.example.com:team/order.git" />
+        </div>
+        <div class="field">
+          <label>目标分支<span class="req">*</span></label>
+          <input class="r-branch" placeholder="feature/order-discount" />
+        </div>
+        <div class="field">
+          <label>对比基线</label>
+          <input class="r-base" placeholder="main（可选）" />
+          <span class="note">可选</span>
+        </div>
+        <div class="field">
+          <label>变更起始<span class="req">*</span></label>
+          <input class="r-start" type="datetime-local" />
+        </div>
+        <div class="field">
+          <label>变更结束<span class="req">*</span></label>
+          <input class="r-end" type="datetime-local" />
+        </div>`;
+      block.querySelector(".rmRepo").addEventListener("click", () => {
+        block.remove();
+        if (!$("#repos").children.length) addRepo(true);   // 至少保留一个
+      });
+      return block;
+    }
+
+    function addRepo(prefillDefaultRange) {
+      const b = repoBlock();
+      if (prefillDefaultRange) {
+        b.querySelector(".r-start").value = toLocal(new Date(Date.now() - 7 * 864e5));
+        b.querySelector(".r-end").value = toLocal(new Date());
+      }
+      $("#repos").appendChild(b);
+    }
+    $("#addRepo").addEventListener("click", () => addRepo(false));
+
+    // datetime-local 需要 YYYY-MM-DDTHH:MM
+    function toInputTime(s) {
+      return String(s || "").trim().replace(" ", "T").slice(0, 16);
+    }
+
+    function resetRepos() {
+      $("#repos").innerHTML = "";
+      repoSeq = 0;
+      addRepo(true);
+    }
+
+    /* ---------- 弹窗：新增 / 编辑 ---------- */
+    function openModal(slug, cfg) {
+      editingSlug = slug || null;
+      setMsg("", "");
+      if (slug && cfg) {
+        $("#modalTitle").textContent = "编辑项目";
+        $("#submitBtn").textContent = "保存修改";
+        $("#editBar").style.display = "";
+        $("#editBar").innerHTML = `正在编辑：<b>${esc(cfg.name || slug)}</b>（${esc(slug)}）· 改名会同步迁移评审历史`;
+        // 回填现有配置
+        $("#name").value = cfg.name || "";
+        $("#repos").innerHTML = ""; repoSeq = 0;
+        (cfg.repos || []).forEach((r) => {
+          const b = repoBlock();
+          b.querySelector(".r-name").value = r.name || "";
+          b.querySelector(".r-git").value = r.git_url || "";
+          b.querySelector(".r-branch").value = r.branch || "";
+          b.querySelector(".r-base").value = r.base || "";
+          b.querySelector(".r-start").value = toInputTime(r.start_time);
+          b.querySelector(".r-end").value = toInputTime(r.end_time);
+          $("#repos").appendChild(b);
+        });
+        if (!$("#repos").children.length) addRepo(true);
+        $("#requirement_doc").value = (cfg.requirement && cfg.requirement.path) || "";
+        $("#workdir").value = cfg.workdir || "";
+        $("#maven_path").value = cfg.maven_path || "";
+        $("#maven_conf").value = cfg.maven_conf || "";
+      } else {
+        $("#modalTitle").textContent = "新增项目";
+        $("#submitBtn").textContent = "保存项目";
+        $("#editBar").style.display = "none";
+        $("#editBar").innerHTML = "";
+        resetRepos();
+        $("#name").value = "";
+        $("#requirement_doc").value = "";
+        $("#workdir").value = "";
+        $("#maven_path").value = "";
+        $("#maven_conf").value = "";
+      }
+      $("#mask").hidden = false;
+      document.body.style.overflow = "hidden";
+      setTimeout(() => $("#name").focus(), 30);
+    }
+
+    function closeModal() {
+      $("#mask").hidden = true;
+      document.body.style.overflow = "";
+      editingSlug = null;
+      $("#editBar").style.display = "none";
+      setMsg("", "");
+    }
+
+    $("#btnNew").addEventListener("click", () => openModal(null, null));
+    $("#btnNew2").addEventListener("click", () => openModal(null, null));
+    $("#modalClose").addEventListener("click", closeModal);
+    $("#cancelBtn").addEventListener("click", closeModal);
+    $("#mask").addEventListener("mousedown", (e) => { if (e.target === $("#mask")) closeModal(); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !$("#mask").hidden) closeModal();
+    });
+
+    async function editProject(slug) {
+      try {
+        const res = await fetch(`/api/projects/${encodeURIComponent(slug)}`);
+        const data = await res.json();
+        if (!res.ok) { toast("读取项目失败：" + (data.detail || "")); return; }
+        openModal(slug, data);
+      } catch (err) {
+        toast("请求异常：" + err.message);
+      }
+    }
+
+    $("#form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setMsg("", "");
+      const blocks = [...$("#repos").querySelectorAll(".repo-block")];
+      const repos = [];
+      for (const b of blocks) {
+        const git = b.querySelector(".r-git").value.trim();
+        const branch = b.querySelector(".r-branch").value.trim();
+        const start = b.querySelector(".r-start").value;
+        const end = b.querySelector(".r-end").value;
+        if (!git || !branch || !start || !end) {
+          setMsg("每个源码工程都需填写 仓库地址 / 分支 / 起止时间。", "err");
+          return;
+        }
+        repos.push({
+          name: b.querySelector(".r-name").value.trim(),
+          git_url: git,
+          branch: branch,
+          base: b.querySelector(".r-base").value.trim() || null,
+          start_time: start,
+          end_time: end,
+        });
+      }
+      const body = {
+        name: $("#name").value.trim(),
+        repos: repos,
+        requirement_doc: $("#requirement_doc").value.trim() || null,
+        workdir: $("#workdir").value.trim() || null,
+        maven_path: $("#maven_path").value.trim() || "",
+        maven_conf: $("#maven_conf").value.trim() || "",
+      };
+      if (!body.name || !body.repos.length) {
+        setMsg("请填写项目名，并至少添加一个源码工程。", "err");
+        return;
+      }
+      const isEdit = !!editingSlug;
+      const btn = $("#submitBtn");
+      btn.disabled = true;
+      try {
+        const res = await fetch(isEdit ? `/api/projects/${editingSlug}` : "/api/projects", {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setMsg((isEdit ? "更新失败：" : "保存失败：") + (data.detail || "未知错误"), "err");
+          return;
+        }
+        toast(isEdit ? "修改已保存" : "项目已保存");
+        const createdSlug = data.slug;
+        closeModal();
+        await refresh();
+        selectProject(createdSlug);
+      } catch (err) {
+        setMsg("请求异常：" + err.message, "err");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    /* ---------- 项目列表 ---------- */
+    function projHtml(p) {
+      const reposHtml = (p.repos || []).map((r, i) =>
+        `<div>工程${i + 1}${r.name ? ` · ${esc(r.name)}` : ""}：<code>${esc(r.git_url)}</code><br />`
+        + `分支：<code>${esc(r.branch)}</code>${r.base ? ` · 基线 <code>${esc(r.base)}</code>` : ""} · ${esc(r.start_time)} ~ ${esc(r.end_time)}</div>`
+      ).join("");
+      return `
+      <div class="proj${p.slug === selectedSlug ? " active" : ""}" data-slug="${p.slug}" data-name="${esc(p.name)}">
+        <div class="row1">
+          <span class="name">${esc(p.name)}</span>
+          <span class="badge" data-jobbadge="${p.slug}"></span>
+        </div>
+        <div class="meta">
+          ${reposHtml}
+          ${p.requirement_doc ? `需求文档：<code>${esc(p.requirement_doc)}</code>` : "需求文档：未指定（降级）"}
+        </div>
+        <div class="ops">
+          <button class="btn-primary btn-sm" data-run="${p.slug}">立即评审</button>
+          <button class="btn-ghost btn-sm" data-edit="${p.slug}">编辑</button>
+          <button class="btn-danger btn-sm" data-del="${p.slug}">删除</button>
+        </div>
+      </div>`;
+    }
+
+    /* ---------- 后台评审：全局串行 + 离开页面继续跑 ----------
+       任务由服务端 daemon 线程执行，与页面无关。这里只负责：
+       1) 展示「后台运行中」横幅（随时可跳回去看实时进度）；
+       2) 有任务在跑时禁用其它项目的评审按钮。 */
+    let ACTIVE_JOB = null;
+    let activeSince = null;  // Date，用于本地秒级走字（不依赖服务端轮询）
+
+    function fmtElapsed(sec) {
+      if (sec == null) return "";
+      const m = Math.floor(sec / 60), s = sec % 60;
+      return m > 0 ? `已运行 ${m} 分 ${s} 秒` : `已运行 ${s} 秒`;
+    }
+
+    function tickElapsed() {
+      if (!activeSince) return;
+      const el = $("#bgTime");
+      if (el) el.textContent = fmtElapsed(Math.floor((Date.now() - activeSince) / 1000));
+    }
+
+    async function pollActive() {
+      let data = { active: null };
+      try {
+        const res = await fetch("/api/jobs/active");
+        data = await res.json();
+      } catch (_) { /* 网络抖动：保持上一次状态 */ }
+      const job = data.active || null;
+      const wasActive = ACTIVE_JOB && ACTIVE_JOB.job_id;
+      ACTIVE_JOB = job;
+
+      const banner = $("#bgBanner");
+      if (job) {
+        activeSince = job.started_at ? new Date(String(job.started_at).replace(" ", "T")) : null;
+        banner.classList.add("show");
+        $("#bgText").innerHTML =
+          `「<strong>${esc(nameOf(job.slug))}</strong>」正在后台评审中` +
+          `<span class="hint">（${esc(job.job_id)}）</span>`;
+        tickElapsed();
+        $("#bgLink").href = `/report/${encodeURIComponent(job.slug)}/${job.job_id}`;
+      } else {
+        activeSince = null;
+        banner.classList.remove("show");
+      }
+
+      // 非正在评审的项目，其「立即评审/再次评审」按钮禁用
+      document.querySelectorAll("[data-run]").forEach((b) => {
+        const busy = !!job && b.dataset.run !== job.slug;
+        b.disabled = busy;
+        b.title = busy ? `「${nameOf(job.slug)}」正在评审中，同一时刻只能评审一个项目` : "";
+      });
+      const repRun = $("#repRun");
+      if (repRun.style.display !== "none") {
+        const busy = !!job && selectedSlug !== job.slug;
+        repRun.disabled = busy;
+        repRun.title = busy ? `「${nameOf(job.slug)}」正在评审中` : "";
+      }
+
+      // 任务结束（或刚启动）时刷新列表与徽标
+      if (wasActive && !job) { pollBadges(); renderReports(selectedSlug); refresh(); }
+      else if (!wasActive && job) { pollBadges(); }
+    }
+
+    async function refresh() {
+      const res = await fetch("/api/projects");
+      const { projects } = await res.json();
+      PROJECTS = projects || [];
+      $("#projCount").textContent = PROJECTS.length ? `共 ${PROJECTS.length} 个` : "";
+      const list = $("#projList");
+      if (!PROJECTS.length) {
+        list.innerHTML = '<div class="empty">还没有项目。点右上角「+ 新增项目」录入第一个评审项目。</div>';
+      } else {
+        list.innerHTML = PROJECTS.map(projHtml).join("");
+      }
+      bindOps();
+      // 顺序不能反：pollBadges 依赖 ACTIVE_JOB 判断「进行中」，
+      // 而运行中的评审可能还没落磁盘 sidecar，只看 runs 列表会误判成「未评审」。
+      await pollActive();  // 须在 bindOps 之后：按钮刚由 projHtml 生成，要同步禁用态
+      pollBadges();
+      // 选中项目若已被删除，退回全部视图
+      if (selectedSlug && !PROJECTS.some((p) => p.slug === selectedSlug)) selectProject(null);
+      else renderReports(selectedSlug);
+    }
+
+    function bindOps() {
+      document.querySelectorAll("[data-run]").forEach((b) =>
+        b.addEventListener("click", (e) => { e.stopPropagation(); runReview(b.dataset.run); }));
+      document.querySelectorAll("[data-edit]").forEach((b) =>
+        b.addEventListener("click", (e) => { e.stopPropagation(); editProject(b.dataset.edit); }));
+      document.querySelectorAll("[data-del]").forEach((b) =>
+        b.addEventListener("click", (e) => { e.stopPropagation(); delProject(b.dataset.del); }));
+      document.querySelectorAll(".proj").forEach((el) =>
+        el.addEventListener("click", () => selectProject(el.dataset.slug)));
+    }
+
+    async function runReview(slug) {
+      // 全局串行：同一时刻只允许一个评审在跑
+      if (ACTIVE_JOB) {
+        toast(ACTIVE_JOB.slug === slug
+          ? `「${nameOf(slug)}」正在评审中，请等待完成。`
+          : `「${nameOf(ACTIVE_JOB.slug)}」正在评审中，同一时刻只能评审一个项目。`);
+        return;
+      }
+      const again = (selectedSlug === slug || $("#repRun").style.display !== "none");
+      const tip = again
+        ? `确认对「${nameOf(slug)}」再次评审？将重新采集 diff 并运行测试；历史报告会保留。`
+        : `确认对「${nameOf(slug)}」启动评审？将克隆仓库并运行沙箱测试，可能耗时数分钟。`;
+      if (!confirm(tip)) return;
+      const res = await fetch(`/api/projects/${encodeURIComponent(slug)}/run`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { toast("启动失败：" + (data.detail || "")); return; }
+      toast("评审已启动，跳转中…");
+      window.location.href = `/report/${encodeURIComponent(slug)}/${data.job_id}`;
+    }
+
+    async function delProject(slug) {
+      if (!confirm(`确认删除项目「${nameOf(slug)}」？评审历史会一并删除。`)) return;
+      const res = await fetch(`/api/projects/${encodeURIComponent(slug)}`, { method: "DELETE" });
+      if (!res.ok) { toast("删除失败"); return; }
+      toast("已删除");
+      selectProject(null);
+      refresh();
+    }
+
+    /* ---------- 项目徽标（最近一次评审状态） ---------- */
+    /* 渲染项目卡片上的评审状态指示灯。
+       kind: idle(未评审) / run(进行中) / done(已完成) / err(失败) */
+    function setIndicator(el, kind, text, tip) {
+      el.className = `badge ind ${kind}`;
+      el.innerHTML = `<i class="dot"></i>${esc(text)}`;
+      el.title = tip || "";
+      el.style.display = "";
+    }
+
+    async function pollBadges() {
+      document.querySelectorAll("[data-jobbadge]").forEach(async (el) => {
+        const slug = el.dataset.jobbadge;
+        // 运行中优先：任务没跑完时磁盘上可能还没有 sidecar，
+        // 只看 runs 列表会把"正在评审"误判成"未评审"。
+        if (ACTIVE_JOB && ACTIVE_JOB.slug === slug) {
+          setIndicator(el, "run", "评审中", `评审进行中（${ACTIVE_JOB.job_id}）`);
+          const b = document.querySelector(`.proj[data-slug="${CSS.escape(slug)}"] [data-run]`);
+          if (b) b.textContent = "再次评审";
+          return;
+        }
+        try {
+          const res = await fetch(`/api/projects/${encodeURIComponent(slug)}/runs`);
+          const { runs } = await res.json();
+          if (!runs || !runs.length) {
+            setIndicator(el, "idle", "未评审", "尚未发起过评审");
+            return;
+          }
+          const latest = runs[0];
+          if (latest.status === "done") {
+            setIndicator(el, "done", "已完成",
+              `共 ${runs.length} 次评审，最近一次已完成`);
+          } else if (latest.status === "error") {
+            setIndicator(el, "err", "评审失败", "最近一次评审执行异常，可点击查看");
+          } else {
+            setIndicator(el, "run", "评审中", "有评审尚未收尾");
+          }
+          const btn = document.querySelector(`.proj[data-slug="${CSS.escape(slug)}"] [data-run]`);
+          if (btn && runs.length) btn.textContent = "再次评审";
+        } catch (_) {
+          setIndicator(el, "idle", "未知", "状态获取失败");
+        }
+      });
+    }
+
+    /* ---------- 报告列表：全部 / 单项目 ---------- */
+    function repRowHtml(r, showProject) {
+      const st = r.status === "done" ? "完成" : r.status === "error" ? "失败" : "进行中";
+      const cls = r.status === "done" ? "ok" : r.status === "error" ? "err" : "run";
+      const s = r.summary || {};
+      const stat = r.status === "done"
+        ? `P0 ${s.p0 || 0} · P1 ${s.p1 || 0} · 缺陷 ${s.total || 0} · 用例 ${s.tests || 0}`
+        : (r.status === "error" ? "执行异常，点击查看" : "评审进行中…");
+      const dur = fmtDur(r.duration_seconds);
+      const projCell = showProject
+        ? `<td class="rep-proj">${esc(r.project_name || nameOf(r.slug))}${r.orphan ? " <small>（项目已删除）</small>" : `<small>${esc(r.slug || "")}</small>`}</td>`
+        : "";
+      return `<tr>
+        ${projCell}
+        <td class="nowrap"><span class="rep-time">${esc(r.finished_at || r.started_at || "-")}</span></td>
+        <td class="nowrap"><span class="h-badge ${cls}">${st}</span></td>
+        <td class="nowrap">${r.verdict ? `<span class="h-verdict">${esc(r.verdict)}</span>` : "—"}</td>
+        <td>${esc(stat)}</td>
+        <td class="nowrap">${dur ? esc(dur) : "—"}</td>
+        <td class="nowrap">
+          <a class="rep-link" href="/report/${encodeURIComponent(r.slug || "")}/${esc(r.job_id)}">查看</a>
+          ${r.has_markdown ? ` · <a class="rep-link" href="/api/runs/${esc(r.job_id)}/markdown" download>下载MD</a>` : ""}
+          ${r.status === "done" || r.status === "error"
+            ? ` · <a class="rep-link rep-del" href="#" data-del-run="${esc(r.job_id)}">删除</a>`
+            : ` · <span class="rep-link rep-disabled">进行中</span>`}
+        </td>
+      </tr>`;
+    }
+
+    async function renderReports(slug) {
+      const box = $("#repList");
+      try {
+        const url = slug ? `/api/projects/${encodeURIComponent(slug)}/runs` : "/api/runs";
+        const res = await fetch(url);
+        const { runs } = await res.json();
+        if (!runs || !runs.length) {
+          $("#repCount").textContent = "";
+          box.innerHTML = slug
+            ? `<div class="rep-nodata">「${esc(nameOf(slug))}」还没有评审报告。点项目上的「${'立即评审'}」发起第一次评审。</div>`
+            : '<div class="rep-nodata">还没有评审报告。先在左侧新增项目并发起评审。</div>';
+          return;
+        }
+        $("#repCount").textContent = `共 ${runs.length} 份`;
+        const showProject = !slug;
+        box.innerHTML = `<table class="rep-table">
+          <thead><tr>
+            ${showProject ? "<th>项目</th>" : ""}
+            <th>完成时间</th><th>状态</th><th>结论</th><th>缺陷 / 用例</th><th>耗时</th><th>报告</th>
+          </tr></thead>
+          <tbody>${runs.map((r) => repRowHtml(r, showProject)).join("")}</tbody>
+        </table>`;
+      } catch (err) {
+        box.innerHTML = `<div class="rep-nodata">加载失败：${esc(err.message)}</div>`;
+      }
+    }
+
+    function selectProject(slug) {
+      selectedSlug = slug || null;
+      document.querySelectorAll(".proj").forEach((el) =>
+        el.classList.toggle("active", el.dataset.slug === selectedSlug));
+      const btn = $("#repRun");
+      if (selectedSlug) {
+        $("#repTitle").textContent = `${nameOf(selectedSlug)} · 评审报告`;
+        btn.style.display = ""; btn.textContent = "再次评审";
+        btn.onclick = () => runReview(selectedSlug);
+        $("#repClear").style.display = "";
+        $("#repBack").style.display = "";
+      } else {
+        $("#repTitle").textContent = "全部评审报告";
+        btn.style.display = "none"; btn.onclick = null;
+        $("#repClear").style.display = "none"; $("#repClear").onclick = null;
+        $("#repBack").style.display = "none";
+      }
+      renderReports(selectedSlug);
+    }
+
+    $("#repBack").addEventListener("click", () => selectProject(null));
+    $("#repRefresh").addEventListener("click", () => { renderReports(selectedSlug); });
+
+    /* 清空某项目的全部报告（进行中的除外） */
+    $("#repClear").addEventListener("click", async () => {
+      if (!selectedSlug) return;
+      if (!confirm(`确认清空「${nameOf(selectedSlug)}」的全部评审报告？进行中的评审不会被删除。`)) return;
+      const res = await fetch(`/api/projects/${encodeURIComponent(selectedSlug)}/runs`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { toast("清空失败：" + (data.detail || "")); return; }
+      toast(`已清空 ${data.deleted || 0} 份报告`);
+      renderReports(selectedSlug);
+      pollBadges();
+    });
+
+    /* 删除单份报告：事件委托，兼容列表重渲染 */
+    $("#repList").addEventListener("click", async (e) => {
+      const a = e.target.closest("[data-del-run]");
+      if (!a) return;
+      e.preventDefault();
+      const jobId = a.dataset.delRun;
+      if (!confirm("确认删除这份评审报告？此操作不可恢复。")) return;
+      const res = await fetch(`/api/runs/${encodeURIComponent(jobId)}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { toast("删除失败：" + (data.detail || "")); return; }
+      toast("已删除");
+      renderReports(selectedSlug);
+      pollBadges();
+    });
+    $("#btnReload").addEventListener("click", () => refresh());
+
+    // 有评审在跑时自动刷新列表与徽标
+    setInterval(() => {
+      if (!$("#repList").querySelector(".h-badge.run")) return;
+      renderReports(selectedSlug);
+      pollBadges();
+    }, 10000);
+
+    // 后台评审状态：3s 一次轻量轮询检测启停；横幅计时靠本地 1s tick 走字
+    setInterval(pollActive, 3000);
+    setInterval(tickElapsed, 1000);
+
+    refresh();
+
+    /* ---------- 大模型设置：本地模式 / 云端模式 ---------- */
+    const LLM = {{ llm | tojson }};
+    let llmMode = LLM.mode || "cloud";
+    const llmMsgEl = $("#llmMsg");
+
+    function setLlmMsg(text, kind) {
+      llmMsgEl.textContent = text;
+      llmMsgEl.className = "msg " + (kind || "");
+    }
+    function llmProf(mode) { return LLM[mode] || {}; }
+
+    function llmFieldsHtml() {
+      const isLocal = llmMode === "local";
+      const p = llmProf(llmMode);
+      const keyPh = p.api_key_set
+        ? `${p.api_key_hint}（已保存，留空不改）`
+        : (isLocal ? "本地服务一般留空" : "sk-...");
+      return `
+        <div class="field">
+          <label>服务地址${isLocal ? '<span class="req">*</span>' : ""}</label>
+          <input id="llmBase" value="${esc(p.base_url || "")}" placeholder="${isLocal ? "http://127.0.0.1:11434/v1" : "https://api.openai.com/v1"}" />
+          <span class="note">${isLocal ? "OpenAI 兼容" : "可选"}</span>
+        </div>
+        <div class="field">
+          <label>模型名<span class="req">*</span></label>
+          <input id="llmModel" value="${esc(p.model || "")}" placeholder="${isLocal ? "qwen2.5-coder:7b" : "gpt-4o"}" />
+        </div>
+        <div class="field">
+          <label>API Key</label>
+          <input id="llmKey" type="password" autocomplete="new-password" placeholder="${esc(keyPh)}" />
+          <span class="note">${isLocal ? "可选" : "必填"}</span>
+        </div>
+        <div class="field">
+          <label>温度</label>
+          <input id="llmTemp" type="number" step="0.1" min="0" max="2" value="${p.temperature === undefined || p.temperature === null ? 0 : p.temperature}" />
+          <span class="note">0 = 最稳</span>
+        </div>
+        <div class="field">
+          <label>超时（秒）</label>
+          <input id="llmTimeout" type="number" step="1" min="5" max="3600" value="${p.timeout === undefined || p.timeout === null ? 120 : p.timeout}" />
+        </div>`;
+    }
+
+    // 模型已配置且已启用 -> 无需每次都展开设置区，默认收起（可手动展开）
+    function llmConfigured() {
+      return LLM.enabled !== false && !!(LLM.active || {}).ready;
+    }
+    function setLlmCollapsed(collapsed, remember) {
+      $("#llmCard").classList.toggle("collapsed", collapsed);
+      $("#llmToggle").textContent = collapsed ? "展开设置" : "收起设置";
+      if (remember) {
+        try { localStorage.setItem("kanma.llm.collapsed", collapsed ? "1" : "0"); } catch (_) {}
+      }
+    }
+    function llmStoredCollapse() {
+      try { return localStorage.getItem("kanma.llm.collapsed"); } catch (_) { return null; }
+    }
+
+    function renderLlmState() {
+      const a = LLM.active || {};
+      const on = LLM.enabled !== false && a.ready;
+      $("#llmDot").className = "dot " + (on ? "on" : "off");
+      let text;
+      if (LLM.enabled === false) text = "离线模式（跳过语义审查）";
+      else if (a.ready) text = `${a.model} · ${a.mode_label}${a.base_url ? " · " + a.base_url : ""}`;
+      else text = `${a.mode_label || "云端模式"}：未配置模型名`;
+      if (llmMode !== LLM.mode) text += "（已改动，待保存）";
+      $("#llmActive").textContent = text;
+    }
+
+    function renderLlm() {
+      $("#llmSeg").querySelectorAll("button").forEach((b) =>
+        b.classList.toggle("on", b.dataset.llmmode === llmMode));
+      $("#llmEnabled").checked = LLM.enabled !== false;
+      $("#llmFields").innerHTML = llmFieldsHtml();
+      $("#llmTip").textContent = llmMode === "local"
+        ? "本地模式：连 Ollama / vLLM / LM Studio / Xinference 等自部署推理服务（OpenAI 兼容协议），代码与 diff 不出内网，通常无需 API Key。"
+        : "云端模式：连 OpenAI、DeepSeek、通义或企业网关的模型 API，需要填写 API Key。";
+      renderLlmState();
+      // 折叠只在"首次进入"时自动决定；用户手动操作过就以用户选择为准
+      const stored = llmStoredCollapse();
+      setLlmCollapsed(stored === null ? llmConfigured() : stored === "1", false);
+    }
+
+    $("#llmToggle").addEventListener("click", () => {
+      setLlmCollapsed(!$("#llmCard").classList.contains("collapsed"), true);
+    });
+    $("#llmCollapse").addEventListener("click", () => setLlmCollapsed(true, true));
+
+    function llmPayload() {
+      const num = (id, dflt) => {
+        const v = Number($(id).value);
+        return Number.isFinite(v) ? v : dflt;
+      };
+      const prof = {
+        model: $("#llmModel").value.trim(),
+        base_url: $("#llmBase").value.trim(),
+        api_key: $("#llmKey").value, // 空串表示保留已保存的密钥
+        temperature: num("#llmTemp", 0),
+        timeout: num("#llmTimeout", 120),
+      };
+      return { mode: llmMode, enabled: $("#llmEnabled").checked, [llmMode]: prof };
+    }
+
+    $("#llmSeg").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-llmmode]");
+      if (!btn) return;
+      llmMode = btn.dataset.llmmode;
+      renderLlm();
+    });
+    $("#llmEnabled").addEventListener("change", renderLlmState);
+
+    $("#llmSave").addEventListener("click", async () => {
+      setLlmMsg("", "");
+      try {
+        const res = await fetch("/api/llm", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(llmPayload()),
+        });
+        const data = await res.json();
+        if (!res.ok) { setLlmMsg("保存失败：" + (data.detail || "未知错误"), "err"); return; }
+        LLM.mode = data.mode; LLM.enabled = data.enabled;
+        LLM.local = data.local; LLM.cloud = data.cloud; LLM.active = data.active;
+        llmMode = data.mode;
+        renderLlm();
+        setLlmMsg(`已切换到${data.mode_label}${data.active.model ? "：" + data.active.model : "（未配置模型名）"}`, "ok");
+        toast("模型设置已保存");
+        // 保存后若已就绪，自动收起设置区；未配置则保持展开方便继续填
+        if (llmConfigured()) setLlmCollapsed(true, true);
+      } catch (err) {
+        setLlmMsg("请求异常：" + err.message, "err");
+      }
+    });
+
+    $("#llmTest").addEventListener("click", async () => {
+      const btn = $("#llmTest");
+      const oldText = btn.textContent;
+      btn.disabled = true; btn.textContent = "测试中…";
+      setLlmMsg("正在连接模型服务…", "");
+      try {
+        const res = await fetch("/api/llm/test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(llmPayload()),
+        });
+        const d = await res.json();
+        if (d.ok) {
+          // 连通 ≠ 可用：评审的语义审查全靠结构化输出，通道探不通就要当场告警，
+          // 否则要等评审跑到步骤 2 才以「语义审查失败」的形式暴露。
+          const st = d.structured || {};
+          const stTxt = st.ok
+            ? ` · 结构化输出：${st.method}`
+            : " · ⚠ 结构化输出不可用，语义审查/用例生成将降级";
+          setLlmMsg(`连接成功：${d.model}（${d.mode_label}）· ${d.latency_ms}ms${stTxt}${d.reply ? " · 回复：" + d.reply : ""}`, "ok");
+        } else {
+          setLlmMsg("连接失败：" + (d.error || "未知错误"), "err");
+        }
+      } catch (err) {
+        setLlmMsg("请求异常：" + err.message, "err");
+      } finally {
+        btn.disabled = false; btn.textContent = oldText;
+      }
+    });
+
+    $("#llmProbe").addEventListener("click", async () => {
+      const box = $("#probeResult");
+      box.innerHTML = "正在探测本机推理服务…";
+      try {
+        const res = await fetch("/api/llm/probe", { method: "POST" });
+        const { results } = await res.json();
+        box.innerHTML = (results || []).map((r) => {
+          const models = (r.models || []).slice(0, 3).join("、");
+          return `<div class="p-item">
+            <span class="p-name">${esc(r.name || "")}</span>
+            <span class="p-url">${esc(r.base_url || "")}</span>
+            ${r.ok
+              ? `<span class="p-ok">可用${models ? " · " + esc(models) : ""}</span>
+                 <button class="btn-ghost" data-fill-url="${esc(r.base_url || "")}" data-fill-model="${esc((r.models || [])[0] || r.suggested_model || "")}">填入本地模式</button>`
+              : `<span class="p-no">未启动（${esc(r.error || "无响应")}）</span>`}
+          </div>`;
+        }).join("");
+        box.querySelectorAll("[data-fill-url]").forEach((b) =>
+          b.addEventListener("click", () => {
+            llmMode = "local";
+            LLM.local = Object.assign({}, LLM.local, {
+              base_url: b.dataset.fillUrl,
+              model: b.dataset.fillModel || (LLM.local || {}).model,
+            });
+            renderLlm();
+            setLlmMsg("已填入本地模式，确认后点「保存并切换」。", "ok");
+          }));
+      } catch (err) {
+        box.innerHTML = `<span style="color:var(--danger)">探测失败：${esc(err.message)}</span>`;
+      }
+    });
+
+    renderLlm();
+
+    /* ---------- 系统设置：全局生效的开关 ---------- */
+    const SYS = {{ sys | tojson }};
+    function setSysMsg(text, kind) {
+      const e = $("#sysMsg");
+      e.textContent = text; e.className = "msg " + (kind || "");
+    }
+    function renderSys() {
+      const v = (SYS.static_review_max_parallel === undefined
+        || SYS.static_review_max_parallel === null)
+        ? 2 : SYS.static_review_max_parallel;
+      $("#staticParallel").value = v;
+      $("#sysState").textContent = v ? `当前：${v} 路并发` : "当前：不限制";
+      // 折叠态：首次以用户上次选择为准；无记录则默认展开（便于看到默认值）
+      const stored = sysStoredCollapse();
+      setSysCollapsed(stored === null ? false : stored === "1", false);
+    }
+    function setSysCollapsed(collapsed, remember) {
+      $("#sysCard").classList.toggle("collapsed", collapsed);
+      $("#sysToggle").textContent = collapsed ? "展开" : "收起";
+      if (remember) {
+        try { localStorage.setItem("kanma.sys.collapsed", collapsed ? "1" : "0"); } catch (_) {}
+      }
+    }
+    function sysStoredCollapse() {
+      try { return localStorage.getItem("kanma.sys.collapsed"); } catch (_) { return null; }
+    }
+    $("#sysToggle").addEventListener("click", () => {
+      setSysCollapsed(!$("#sysCard").classList.contains("collapsed"), true);
+    });
+    $("#sysSave").addEventListener("click", async () => {
+      setSysMsg("", "");
+      const v = parseInt($("#staticParallel").value, 10);
+      if (isNaN(v) || v < 0) { setSysMsg("并发度上限必须为非负整数", "err"); return; }
+      try {
+        const res = await fetch("/api/system", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ static_review_max_parallel: v }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setSysMsg("保存失败：" + (data.detail || "未知错误"), "err"); return; }
+        SYS.static_review_max_parallel = data.static_review_max_parallel;
+        renderSys();
+        setSysMsg("系统设置已保存", "ok");
+        toast("系统设置已保存");
+      } catch (err) {
+        setSysMsg("请求异常：" + err.message, "err");
+      }
+    });
+    renderSys();
+  </script>
+</body>
+</html>

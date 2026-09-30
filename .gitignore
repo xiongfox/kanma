@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.workbuddy/
+# 勘码工作区：克隆的仓库与临时测试代码
+.kanma/
+.kanma-logs/
+
+# 报告产物（示例报告保留）
+docs/
+
+.DS_Store
+.env

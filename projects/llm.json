@@ -1,0 +1,18 @@
+{
+  "mode": "local",
+  "enabled": true,
+  "local": {
+    "model": "chat",
+    "base_url": "http://127.0.0.1:4000/v1",
+    "api_key": "23bf2600368c3b41fffd1873f8035a0c",
+    "temperature": 0.0,
+    "timeout": 120
+  },
+  "cloud": {
+    "model": "",
+    "base_url": "",
+    "api_key": "",
+    "temperature": 0.0,
+    "timeout": 120
+  }
+}

@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="vSgvkIfCoV6xsaEVp5Byx6">
+<head data-page-node-id="6sLuLqjyG8NdxT1NMYPmCr">
+  <meta charset="UTF-8" data-page-node-id="5nvELSdIB0UFMv9FWBCHIH" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="MkFuzNr427rH5Vszh7GRIP" />
+  <title>勘码 KanMa · 评审报告</title>
+  <style>
+    :root {
+      --bg: #f5f7fa; --card: #fff; --border: #e2e8f0; --text: #1e293b;
+      --muted: #64748b; --primary: #2563eb; --ok: #16a34a; --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", sans-serif;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 24px 20px 64px; }
+    header.top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    header.top h1 { font-size: 20px; margin: 0; }
+    a.back { color: var(--primary); text-decoration: none; font-size: 14px; }
+    a.back:hover { text-decoration: underline; }
+    .ops-top { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; flex-wrap: wrap; }
+    .btn {
+      border: 1px solid var(--border); background: #fff; color: #334155; border-radius: 8px;
+      padding: 6px 14px; font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: none;
+      display: inline-block;
+    }
+    .btn:hover { background: #f1f5f9; }
+    .btn:disabled { color: var(--muted); cursor: default; background: #fff; }
+    .btn-danger { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+    .btn-danger:hover { background: #fecaca; }
+    .status {
+      display: inline-block; padding: 4px 12px; border-radius: 999px;
+      font-size: 13px; font-weight: 600; margin-left: auto;
+    }
+    .status.queued, .status.running { background: #fef3c7; color: #92400e; }
+    .status.done { background: #dcfce7; color: #166534; }
+    .status.error { background: #fee2e2; color: #991b1b; }
+
+    /* 进度：六步流水线 + 实时日志 */
+    .panel {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(15,23,42,.04);
+    }
+    .panel h3 { margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #334155; }
+    .steps { display: flex; flex-wrap: wrap; gap: 8px; }
+    .steps.flow { display: block; }
+    .flow svg { width: 100%; height: auto; display: block; }
+    .flow .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .flow .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+    .flow .node-label { font: 600 12px -apple-system, "PingFang SC", sans-serif; }
+    .flow .node-sub { font: 11px ui-monospace, Menlo, monospace; }
+    .step {
+      display: flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px;
+      border: 1px solid var(--border); font-size: 12.5px; color: var(--muted); background: #fff;
+    }
+    .step .dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; flex: none; }
+    .step.running { border-color: #fcd34d; background: #fffbeb; color: #92400e; }
+    .step.running .dot { background: #f59e0b; animation: pulse 1s infinite; }
+    .step.done { border-color: #86efac; background: #f0fdf4; color: #166534; }
+    .step.done .dot { background: var(--ok); }
+    .step.error { border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
+    .step.error .dot { background: var(--danger); }
+    .step .ms { color: var(--muted); font-size: 11.5px; }
+    .step .skip { color: var(--danger); font-size: 11.5px; cursor: help; }
+    .step .skip:hover::after {
+      content: attr(data-reason);
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 10;
+      margin-top: 4px;
+    }
+    /* 实时进度条：解决「节点跑几十秒却只看到六步粗粒度」的观测性问题 */
+    .live {
+      margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 10px; background: #f8fafc;
+    }
+    .live[hidden] { display: none; }
+    .live-head { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+    .live-name { font-weight: 600; color: #334155; }
+    .live-count { color: #0f172a; font-variant-numeric: tabular-nums; }
+    .live-timer { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .live-track {
+      margin-top: 8px; height: 6px; background: #e2e8f0;
+      border-radius: 999px; overflow: hidden;
+    }
+    .live-fill {
+      height: 100%; width: 0; border-radius: 999px;
+      background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+      transition: width .25s ease;
+    }
+    .live-action {
+      margin-top: 6px; font-size: 12px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+    .log {
+      margin-top: 14px; max-height: 220px; overflow: auto; background: #0f172a;
+      color: #cbd5e1; border-radius: 8px; padding: 12px 14px;
+      font: 12.5px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap;
+    }
+    .log:empty { display: none; }
+    .log .ln { display: block; }
+    .log .ln.new { animation: fadein .3s; }
+    @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+    .hint { color: var(--muted); font-size: 13px; }
+
+    .summary { display: flex; gap: 18px; margin: 0 0 18px; flex-wrap: wrap; }
+    .summary > div {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 16px; min-width: 96px;
+    }
+    .summary .k { color: var(--muted); font-size: 12px; }
+    .summary .v { font-size: 18px; font-weight: 700; }
+    .summary .v.sm { font-size: 14px; }
+    .report {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 28px 32px; box-shadow: 0 1px 2px rgba(15,23,42,.04);
+    }
+    .report:empty { display: none; }
+    .report h1, .report h2, .report h3 { line-height: 1.3; }
+    .report h1 { font-size: 22px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+    .report h2 { font-size: 18px; margin-top: 28px; }
+    .report h3 { font-size: 15px; }
+    .report table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13.5px; }
+    .report th, .report td { border: 1px solid var(--border); padding: 7px 10px; text-align: left; }
+    .report th { background: #f1f5f9; }
+    /* 缺陷清单、测试用例表格：内容过长时横向滚动 */
+    .report .table-scroll { overflow-x: auto; margin: 12px 0; }
+    .report .table-scroll table { min-width: 600px; }
+    .report .table-scroll pre { margin: 8px 0; }
+    /* 严重级别徽标：P0 红（禁止合入）/ P1 橙（必改）/ P2 蓝（建议）/ P3 灰（可选），按严重程度配色 */
+    .sev-P0, .sev-P1, .sev-P2, .sev-P3 {
+      display: inline-block; padding: 1px 8px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; line-height: 1.6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      white-space: nowrap;
+    }
+    .sev-P0 { background: #fee2e2; color: #b91c1c; }
+    .sev-P1 { background: #fef3c7; color: #b45309; }
+    .sev-P2 { background: #dbeafe; color: #1d4ed8; }
+    .sev-P3 { background: #f1f5f9; color: #475569; }
+    .report code { background: #f1f5f9; padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+    .report pre {
+      background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+      overflow: auto; font-size: 13px; line-height: 1.5;
+    }
+    .report pre code { background: none; color: inherit; padding: 0; }
+    .report blockquote { border-left: 3px solid var(--border); margin: 12px 0; padding: 4px 14px; color: var(--muted); }
+    .cursor {
+      display: inline-block; width: 8px; height: 16px; background: var(--primary);
+      vertical-align: -2px; animation: blink 1s steps(2, start) infinite; margin-left: 2px;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .err-box { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;
+      padding: 14px 16px; border-radius: 8px; white-space: pre-wrap; font-size: 13px; }
+  </style>
+</head>
+<body data-page-node-id="9nE0dsrljKhtQfslJP3zco">
+  <div class="wrap" data-page-node-id="VAWpP1AGXmCrUjISY1rFMl">
+    <header class="top" data-page-node-id="OqakWTQCf73XmXL4r2sGsE">
+      <h1 data-page-node-id="Ta0PP2GN8gkfvIgE7PebhJ">评审报告</h1>
+      <span class="status {{ status }}" id="statusBadge" data-page-node-id="1HGAH0PaHmRyVdyXOBrg7H">{{ status }}</span>
+    </header>
+
+    <div class="ops-top" data-page-node-id="JKkDstTQDp196bx26owYNq">
+      <a class="back" href="/" data-page-node-id="EtG8YTAltNKOANt0sTtYi5">← 返回项目列表</a>
+      <a class="btn" id="dlBtn" href="/api/runs/{{ job_id }}/markdown"
+         download="review-{{ job_id }}.md"{% if status != "done" %} style="display:none"{% endif %} data-page-node-id="K0UOpeiurYKXENPtRuV05W">下载 Markdown</a>
+      <button class="btn" type="button" id="rerunBtn" data-page-node-id="qwdPM47bCotoekA4vS6LLB">再次评审</button>
+      <button class="btn btn-danger" type="button" id="delBtn" data-page-node-id="mN3k2wQ9rVcLpX5yU8aZ1b">删除此报告</button>
+      <span class="hint" id="runHint" data-page-node-id="uLvCbdbhM7GvkT46jO4ipg">{% if status == "done" or status == "error" %}{% else %}评审进行中 · <strong>后台运行</strong>，可离开本页面，稍后回来继续查看{% endif %}</span>
+    </div>
+
+    <!-- 执行进度：六步流水线 + 实时日志 -->
+    <section class="panel" id="progressPanel" data-page-node-id="fhIAv7LcF4ntdNeDtjsp7R">
+      <h3 data-page-node-id="jXPmgtXEXxiOzYFuKR6fGR">执行进度</h3>
+      <div class="steps flow" id="steps" data-page-node-id="04qc27AHsMB4O65UHDWK8U"></div>
+      <!-- 实时进度：当前步骤 + i/N + 百分比 + 计时 + 正在做什么 -->
+      <div class="live" id="liveBar" hidden data-page-node-id="L1vEbAr0Bz9Qk3xT7mNp2c">
+        <div class="live-head">
+          <span class="live-name" id="liveName" data-page-node-id="LvNm3aQ8Zx1Bn5Rt9WqY4d">—</span>
+          <span class="live-count" id="liveCount" data-page-node-id="LcTt7pQ2Vb8Md4Xn1RzJ6s"></span>
+          <span class="live-timer" id="liveTimer" data-page-node-id="LtMr5kQ9Nh2Wc7Yb3FxP8v"></span>
+        </div>
+        <div class="live-track"><div class="live-fill" id="liveFill" data-page-node-id="LfLq4wQ6Jd3Vs8Zm2CbN7t"></div></div>
+        <div class="live-action" id="liveAction" data-page-node-id="LaCt2nQ7Gj5Rk9Wx4MvB3z"></div>
+      </div>
+      <div class="log" id="log" data-page-node-id="YcIUnItgv7bp9ve08npO5W"></div>
+    </section>
+
+    <div id="errBox" data-page-node-id="XTkCIvB0DNt92mP4QKYxxx"></div>
+
+    <div class="summary" id="summary"{% if status != "done" %} style="display:none"{% endif %} data-page-node-id="XPfJYBAuaK8Bw0PH79GhUR">
+      <div data-page-node-id="9fhLdWEEa6zoZlNzy9wCs4"><div class="k" data-page-node-id="eN5OKNJ7gWKuJnDdOauPV0">结论</div><div class="v sm" id="sVerdict" data-page-node-id="cnSypFzzWaTrDmUiiVqJB6">{{ verdict or "—" }}</div></div>
+      <div data-page-node-id="5y2IqDHa2wUzHnN8S5WTGO"><div class="k" data-page-node-id="GNJ3SKq172EwL4CFKBtbCK">P0</div><div class="v" id="sP0" style="color:var(--danger)" data-page-node-id="QGllpePe9eVZy7fOY4YVaw">{{ summary.p0 or 0 }}</div></div>
+      <div data-page-node-id="z408j2xGizk6MrU1IHcD2a"><div class="k" data-page-node-id="eWkGwZi0YLltQjlR5pYLWN">P1</div><div class="v" id="sP1" style="color:#d97706" data-page-node-id="s2odE2p4OeMLtAok2LQEy0">{{ summary.p1 or 0 }}</div></div>
+      <div data-page-node-id="BavYnFEW02l6XvMwoO7xux"><div class="k" data-page-node-id="h77qcf2XGrCxyqrT8ZWVm8">缺陷合计</div><div class="v" id="sTotal" data-page-node-id="6wwZRkZs2bMmKv18mfSOHL">{{ summary.total or 0 }}</div></div>
+      <div data-page-node-id="mRqP9fepPnMQKFQS9rvTr6"><div class="k" data-page-node-id="vDKML6wVrx3VZPMSnxvQNk">测试用例</div><div class="v" id="sTests" data-page-node-id="nnBW95ocxDwpyFCFHxH4DZ">{{ summary.tests or 0 }}</div></div>
+      <div data-page-node-id="1IBDHrUhTig2bvkdIVIowA"><div class="k" data-page-node-id="3bXOwGgNbLEGOfAgmNDQvK">模型</div><div class="v sm" id="sLlm" data-page-node-id="D01K3T0rPeDRFaVhkMOAcL">{{ (llm.label if llm else "—") }}</div></div>
+    </div>
+
+    <!-- 报告正文：由 SSE 分块追加 -->
+    <div class="report" id="report" data-page-node-id="KGqflU4gtgnmAlfonvRgJ1">{% if status == "done" %}{{ html | safe }}{% endif %}</div>
+  </div>
+
+  <script>
+    const JOB_ID = "{{ job_id }}";
+    const SLUG = "{{ slug }}";
+    window.__llm = {{ llm | tojson }};   // SSR 带来的模型信息，done 事件要用
+    const STEP_ORDER = [
+      ["diff_collect", "1 采集 diff"],
+      ["static_review", "2 静态审查"],
+      ["testcase_gen", "3 生成用例"],
+      ["testcode_gen", "4 生成测试"],
+      ["sandbox_run", "5 沙箱执行"],
+      ["report_merge", "6 汇总结论"],
+    ];
+    const STEP_LABEL = {
+      diff_collect: "步骤 1 · 采集 diff",
+      static_review: "步骤 2 · 静态审查",
+      testcase_gen: "步骤 3 · 生成回归用例",
+      testcode_gen: "步骤 4 · 生成测试代码",
+      sandbox_run: "步骤 5 · 沙箱执行测试",
+      report_merge: "步骤 6 · 汇总与结论",
+    };
+    // 步骤 2 按「规约章节」并发：一个章节一个节点（数量由 rules/data/*.md 决定），
+    // 进度条按「整步」聚合展示，否则 N 路进度会互相顶掉、计时器每次都从零开始跳。
+    const STATIC_CH_PREFIX = "static_review_ch_";
+    const STATIC_GENERAL = "static_review_general";
+    // 子步骤的中文名由服务端随事件下发（章节名会随规约数据变化，前端不硬编码）
+    const subLabel = {};
+    function isStaticSub(node) {
+      return node.indexOf(STATIC_CH_PREFIX) === 0 || node === STATIC_GENERAL;
+    }
+    function groupOf(node) {
+      return (isStaticSub(node) || node === "static_review_merge" || node === "static_review")
+        ? "static_review" : node;
+    }
+    // 六路 i/N 合并成一个总进度：已完成项求和 / 总项求和
+    function aggProg(nodes) {
+      let cur = 0, total = 0;
+      nodes.forEach((n) => { const p = liveProg[n]; if (p) { cur += p.current; total += p.total; } });
+      return { current: cur, total: total };
+    }
+
+    const elSteps = document.getElementById("steps");
+    const elLog = document.getElementById("log");
+    const elReport = document.getElementById("report");
+    const elStatus = document.getElementById("statusBadge");
+    const elHint = document.getElementById("runHint");
+    const stepState = {};      // node -> phase（running / done / error）
+    let logCount = 0;          // 已渲染的日志行数（用于增量追加）
+    let nextChunk = 0;         // 下一个应接收的报告块序号
+    let seenSteps = [];        // 已出现的步骤顺序
+    let lastStepsSig = "";     // 进度 DAG 上次渲染签名，无变化则不重绘（避免并发日志高频重绘闪烁）
+    // 模块级：renderSteps 与 updateNodeSub 共用（状态切换重建、进度就地更新都依赖它）
+    const statusOf = (node) => {
+      if (stepState[node + ":skip"]) return "skip";
+      const s = stepState[node];
+      if (s === "done") return "done";
+      if (s === "error") return "error";
+      if (s === "waiting") return "waiting";   // 抢不到并发额度，排队中（非进行中）
+      if (s === "running" || s === "start") return "running";
+      return "pending";
+    };
+    const subOf = (node) => {
+      if (stepState[node + ":skip"]) return "⚠ 跳过";
+      const s = stepState[node];
+      if (s === "waiting") return "排队中";
+      if (s === "running") {
+        const p = liveProg[node];
+        return p && p.total > 0 ? `${p.current}/${p.total}` : "进行中";
+      }
+      if (s === "error") return "失败";
+      if (s === "done") return fmtMs(stepState[node + ":ms"]);
+      return "";
+    };
+
+    // --- 实时进度（细粒度观测） ---
+    const elLiveBar = document.getElementById("liveBar");
+    const elLiveName = document.getElementById("liveName");
+    const elLiveCount = document.getElementById("liveCount");
+    const elLiveTimer = document.getElementById("liveTimer");
+    const elLiveFill = document.getElementById("liveFill");
+    const elLiveAction = document.getElementById("liveAction");
+    const liveProg = {};       // node -> {current,total,label}  最新一次 i/N
+    let liveNode = null;       // 当前正在跑的节点
+    let liveT0 = 0;            // 该节点开始时间（ms），用于实时计时
+
+    function fmtMs(ms) {
+      if (!ms && ms !== 0) return "";
+      return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+    }
+    function stepName(node) {
+      if (subLabel[node]) return subLabel[node];
+      const meta = STEP_ORDER.find((s) => s[0] === node);
+      return meta ? meta[1] : node;
+    }
+    // 章节子节点名取「短名」：subLabel[node] 形如「步骤 2 · 静态审查（编码规范）」，
+    // 进度图里只展示括号内的章节标题（编码规范 / 安全规范 / 通用审查），避免被截断成「步骤 2 · …」。
+    function chapterTitle(node) {
+      const raw = subLabel[node] || "";
+      const m = /[（(]([^（）()]+)[)）]\s*$/.exec(raw);
+      if (m) return m[1];
+      if (node && node.indexOf(STATIC_CH_PREFIX) === 0) {
+        return node.slice(STATIC_CH_PREFIX.length).replace(/_/g, " ");
+      }
+      return raw || node || "审查";
+    }
+    function renderLive() {
+      if (!liveNode) { elLiveBar.hidden = true; return; }
+      // 步骤 2 的各章并发：任一还在跑就继续展示，进度取各路之和
+      if (groupOf(liveNode) === "static_review") {
+        const subs = seenSteps.filter(isStaticSub);
+        const isRun = (n) => stepState[n] === "running" || stepState[n] === "start";
+        const running = subs.filter(isRun);
+        const waiting = subs.filter((n) => stepState[n] === "waiting");
+        const mergeRunning =
+          stepState["static_review_merge"] === "running" ||
+          stepState["static_review_merge"] === "start";
+        if (!running.length && !waiting.length && !mergeRunning) { elLiveBar.hidden = true; return; }
+        elLiveBar.hidden = false;
+        // 所有章节审完、进入汇总节点时：明确提示"正在汇总"，避免进度条凭空消失
+        if (mergeRunning && !running.length && !waiting.length) {
+          elLiveName.textContent = "步骤 2 · 审查结果汇总中";
+          elLiveCount.textContent = "";
+          elLiveFill.style.width = "100%";
+          elLiveAction.textContent = "";
+          renderLiveTimer();
+          return;
+        }
+        // 并发度受限时如实区分「在跑 / 排队」：只有真正拿到额度打模型的章节算在跑
+        const names = running.map(chapterTitle).filter(Boolean).join("、");
+        const waitingNames = waiting.map(chapterTitle).filter(Boolean).join("、");
+        const queued = waiting.length ? `，${waiting.length} 章排队` : "";
+        elLiveName.textContent = `步骤 2 · 静态审查（${running.length}/${subs.length} 章在跑${queued}）`;
+        elLiveAction.textContent = names
+          ? (waitingNames ? `正在审查：${names}｜排队中：${waitingNames}` : `正在审查：${names}`)
+          : (waitingNames ? `排队中：${waitingNames}` : "准备中…");
+        const p = aggProg(subs);
+        if (p.total > 0) {
+          const pct = Math.max(0, Math.min(100, Math.round((p.current / p.total) * 100)));
+          elLiveCount.textContent = p.current === 0 ? "准备中" : `${p.current}/${p.total} · ${pct}%`;
+          elLiveFill.style.width = pct + "%";
+        } else {
+          elLiveCount.textContent = "";
+          elLiveFill.style.width = "0%";
+        }
+        renderLiveTimer();
+        return;
+      }
+      // 评审已结束：收起进度条
+      if (stepState[liveNode] === "done" || stepState[liveNode] === "error") {
+        elLiveBar.hidden = true;
+        return;
+      }
+      const p = liveProg[liveNode];
+      elLiveBar.hidden = false;
+      elLiveName.textContent = stepName(liveNode);
+      if (p && p.total > 0) {
+        const pct = Math.max(0, Math.min(100, Math.round((p.current / p.total) * 100)));
+        // 0/total 表示"刚开始、还没完成第一项"，显示百分比会误读成卡住
+        elLiveCount.textContent = p.current === 0 ? "准备中" : `${p.current}/${p.total} · ${pct}%`;
+        elLiveFill.style.width = pct + "%";
+      } else {
+        elLiveCount.textContent = "";
+        elLiveFill.style.width = "0%";
+      }
+      renderLiveTimer();
+    }
+    function renderLiveTimer() {
+      if (!liveNode || !liveT0) { elLiveTimer.textContent = ""; return; }
+      const s = (Date.now() - liveT0) / 1000;
+      elLiveTimer.textContent = s < 60 ? `${s.toFixed(1)}s` : `${Math.floor(s / 60)}m${String(Math.floor(s % 60)).padStart(2, "0")}s`;
+    }
+    setInterval(renderLiveTimer, 500);   // 计时自己走，不依赖服务端推事件
+    // 维护全量日志行，按 [步骤N.M] 升序插入 DOM。
+    // 步骤 2 各章并发跑，落盘顺序可能是 2.4→2.3→2.6…，但展示必须低→高。
+    let logLines = [];
+    function substepKey(line) {
+      const m = /^\[步骤(\d+)\.(\d+)\]/.exec(line || "");
+      return m ? [parseInt(m[1], 10), parseInt(m[2], 10)] : [9999, 9999]; // 无编号行排末尾
+    }
+    function cmpKey(a, b) { return a[0] - b[0] || a[1] - b[1]; }
+
+    function appendLog(lines) {
+      if (!lines || !lines.length) return;
+      lines.forEach((t) => {
+        const key = substepKey(t);
+        // 在已维护的升序数组里定位插入点（保持 logLines 与 DOM 同序）
+        let i = logLines.length;
+        while (i > 0 && cmpKey(substepKey(logLines[i - 1]), key) > 0) i--;
+        logLines.splice(i, 0, t);
+        const refNode = elLog.children[i] || null;
+        const d = document.createElement("span");
+        d.className = "ln new";
+        d.textContent = t;
+        elLog.insertBefore(d, refNode);
+      });
+      logCount = logLines.length;
+      elLog.scrollTop = elLog.scrollHeight;
+    }
+    function renderSteps() {
+      // 执行进度改为 graph（DAG）样式：采集 diff → 静态审查（各章并发扇入→汇总）
+      // → 生成用例 → 生成测试 → 沙箱执行 → 汇总结论。节点按状态着色，显示耗时/跳过。
+      const hasSubs = seenSteps.some(isStaticSub);
+      const chapters = hasSubs ? seenSteps.filter(isStaticSub).slice().sort() : [];
+      const mergeSeen = seenSteps.includes("static_review_merge");
+
+      // 流程固定六段；静态审查段在有规约章节时展开为「N 章 + 汇总」子图
+      const stages = [
+        { node: "diff_collect", label: "① 采集 diff" },
+        { node: "static_review", label: "② 静态审查", chapters: chapters, merge: mergeSeen },
+        { node: "testcase_gen", label: "③ 生成用例" },
+        { node: "testcode_gen", label: "④ 生成测试" },
+        { node: "sandbox_run", label: "⑤ 沙箱执行" },
+        { node: "report_merge", label: "⑥ 汇总结论" },
+      ];
+
+      const NW = 124, NH = 42, ARROW = 30, padX = 10, padY = 14, padTop = 26;
+      const colW = (st) =>
+        st.node === "static_review" && st.chapters.length ? NW * 2 + 26 : NW;
+
+      let x = padX;
+      const cols = stages.map((st) => {
+        const w = colW(st);
+        const c = { st, x, w };
+        x += w + ARROW;
+        return c;
+      });
+      const totalW = x - ARROW + padX;
+
+      const stackN = Math.max(1, chapters.length);
+      const stackH = stackN * (NH + 10) - 10;
+      const bigH = Math.max(NH, stackH);
+      // padTop 给「② 静态审查 · 各章并发」分组标题留白，保证虚线框与标题不被裁切
+      const H = bigH + padTop + padY;
+      const midY = padTop + bigH / 2;
+      let chGroupRect = null;
+
+      const C = {
+        pending: { fill: "#eef2f7", stroke: "#cbd5e1", text: "#64748b" },
+        waiting: { fill: "#f1f5f9", stroke: "#94a3b8", text: "#64748b" },
+        running: { fill: "#e8f0fe", stroke: "#3b82f6", text: "#1d4ed8" },
+        done: { fill: "#e7f7ec", stroke: "#22c55e", text: "#15803d" },
+        error: { fill: "#fdecec", stroke: "#ef4444", text: "#b91c1c" },
+        skip: { fill: "#fef3e2", stroke: "#f59e0b", text: "#b45309" },
+      };
+      const esc = (s) =>
+        String(s).replace(/[<>&"]/g, (c) =>
+          ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+
+      // 签名闸门：节点集 + 各节点状态/子文案未变则不重绘。
+      // 否则并发日志高频触发整图重建，SMIL 动画反复重启、整图闪烁（多章并发时尤甚）。
+      const _all = seenSteps.slice().concat(
+        ["diff_collect", "static_review_merge", "testcase_gen",
+         "testcode_gen", "sandbox_run", "report_merge"]);
+      const _uniq = [...new Set(_all)];
+      let _sig = "ch:" + chapters.join(",") + "|m:" + (mergeSeen ? "1" : "0") + "|";
+      _uniq.forEach((n) => {
+        _sig += n + ":" + statusOf(n) + ":" + (subOf(n) || "") + ":"
+          + (stepState[n + ":skip"] || "") + ":" + (stepState[n + ":ms"] || "") + ";";
+      });
+      if (_sig === lastStepsSig) return;
+      lastStepsSig = _sig;
+
+      // 收集每个阶段的节点盒与「入口/出口」连接点
+      const boxes = [];      // {x,y,w,h,label,sub,status,reason}
+      const stageIO = [];    // 每个阶段 {entries:[[x,y]...], exits:[[x,y]...]}
+      const edges = [];      // {x1,y1,x2,y2,color}
+      const edgesPush = (x1, y1, x2, y2, color) => edges.push({ x1, y1, x2, y2, color });
+      cols.forEach(({ st, x: cx, w }) => {
+        if (st.node === "static_review" && st.chapters.length) {
+          const top = midY - stackH / 2;
+          // 分组虚线框：把各章并发子节点与右侧「审查结果汇总」节点在视觉上区分开
+          chGroupRect = { x: cx - 6, y: top - 4, w: NW + 12, h: stackH + 8 };
+          const entries = [], exits = [];
+          st.chapters.forEach((node, i) => {
+            const y = top + i * (NH + 10);
+            boxes.push({
+              x: cx, y, w: NW, h: NH, node,
+              label: chapterTitle(node),
+              sub: subOf(node), status: statusOf(node),
+              reason: stepState[node + ":skip"] || "",
+            });
+            entries.push([cx, y + NH / 2]);
+            exits.push([cx + NW, y + NH / 2]);
+          });
+          // 汇总节点：置于该段右侧，垂直居中
+          const mNode = "static_review_merge";
+          const my = midY - NH / 2;
+          boxes.push({
+            x: cx + w - NW, y: my, w: NW, h: NH, node: mNode,
+            label: "② 审查结果汇总", sub: subOf(mNode),
+            status: statusOf(mNode), reason: stepState[mNode + ":skip"] || "",
+          });
+          entries.push([cx + w - NW, midY]);
+          stageIO.push({ entries, exits: [[cx + w, midY]] });
+          // 章→汇总 的内部边
+          st.chapters.forEach((node, i) => {
+            const y = top + i * (NH + 10);
+            const col = C[statusOf(mNode)].stroke;
+            edgesPush(cx + NW, y + NH / 2, cx + w - NW, midY, col);
+          });
+        } else {
+          const y = midY - NH / 2;
+          // 用 stages 里的短名（① 采集 diff…）：subLabel 是服务端下发的长名
+          // （「步骤 5 · 沙箱执行测试」），放进 124px 的节点盒会被截断成「步骤 5 · 沙…」，
+          // 且节点开始前/后标题还会变。长名留给进度条用（stepName）。
+          const label = st.label;
+          boxes.push({
+            x: cx, y, w: NW, h: NH, node: st.node, label, sub: subOf(st.node),
+            status: statusOf(st.node), reason: stepState[st.node + ":skip"] || "",
+          });
+          stageIO.push({ entries: [[cx, midY]], exits: [[cx + NW, midY]] });
+        }
+      });
+
+      // 段间连线：左段所有出口 → 右段所有入口（天然表达扇入/扇出）
+      for (let i = 0; i < stageIO.length - 1; i++) {
+        const L = stageIO[i].exits, R = stageIO[i + 1].entries;
+        const targetStatus = statusOf(stages[i + 1].node) === "pending" && stages[i + 1].node === "static_review"
+          ? "pending" : statusOf(stages[i + 1].node);
+        const col = C[targetStatus] ? C[targetStatus].stroke : "#cbd5e1";
+        L.forEach(([x1, y1]) => R.forEach(([x2, y2]) =>
+          edgesPush(x1, y1, x2, y2, col)));
+      }
+
+      let svg = `<svg viewBox="0 0 ${totalW} ${H}" role="img" aria-label="评审执行流程图">`;
+      svg += `<defs><marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">`
+        + `<path d="M0,0 L9,4.5 L0,9 z" fill="#94a3b8"/></marker></defs>`;
+      // 步骤 2 子节点分组框（虚线 + 标题），把「各章并发」与右侧「汇总」节点区分开
+      if (chGroupRect) {
+        svg += `<rect x="${chGroupRect.x}" y="${chGroupRect.y}" width="${chGroupRect.w}" height="${chGroupRect.h}" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-dasharray="5 4"/>`;
+        svg += `<text x="${chGroupRect.x + 10}" y="${chGroupRect.y + 15}" text-anchor="start" fill="#64748b" style="font:600 11px -apple-system,'PingFang SC',sans-serif">② 静态审查 · 各章并发</text>`;
+      }
+      // 边
+      edges.forEach((e) => {
+        svg += `<path d="M${e.x1},${e.y1} C${(e.x1 + e.x2) / 2},${e.y1} ${(e.x1 + e.x2) / 2},${e.y2} ${e.x2},${e.y2}" `
+          + `fill="none" stroke="${e.color}" stroke-width="2" marker-end="url(#arw)" opacity="0.85"/>`;
+      });
+      // 节点盒
+      boxes.forEach((b) => {
+        const c = C[b.status] || C.pending;
+        const cx = b.x + b.w / 2;
+        const cy = b.y + b.h / 2;
+        const title = b.reason ? ` <title>${esc(b.reason)}</title>` : "";
+        svg += `<g data-node="${b.node}"${title}>`;
+        if (b.status === "running") {
+          svg += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="10" `
+            + `fill="${c.fill}" stroke="${c.stroke}" stroke-width="2">`
+            + `<animate attributeName="opacity" values="1;0.55;1" dur="1.2s" repeatCount="indefinite"/></rect>`;
+        } else {
+          svg += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="10" `
+            + `fill="${c.fill}" stroke="${c.stroke}" stroke-width="2"/>`;
+        }
+        const lbl = b.label.length > 9 ? b.label.slice(0, 8) + "…" : b.label;
+        svg += `<text class="node-label" x="${cx}" y="${cy - 4}" text-anchor="middle" fill="${c.text}">${esc(lbl)}</text>`;
+        if (b.sub) {
+          svg += `<text class="node-sub" x="${cx}" y="${cy + 13}" text-anchor="middle" fill="${c.text}">${esc(b.sub)}</text>`;
+        }
+        svg += `</g>`;
+      });
+      svg += `</svg>`;
+
+      const legend = `<div class="legend">`
+        + `<span><i style="background:#eef2f7;border:1px solid #cbd5e1"></i>待执行</span>`
+        + `<span><i style="background:#e8f0fe;border:1px solid #3b82f6"></i>进行中</span>`
+        + `<span><i style="background:#f1f5f9;border:1px solid #94a3b8"></i>排队中</span>`
+        + `<span><i style="background:#e7f7ec;border:1px solid #22c55e"></i>已完成</span>`
+        + `<span><i style="background:#fef3e2;border:1px solid #f59e0b"></i>已跳过</span>`
+        + `<span><i style="background:#fdecec;border:1px solid #ef4444"></i>失败</span></div>`;
+      elSteps.innerHTML = svg + legend;
+    }
+    // 就地更新某节点的子文案（如 running 的 i/N 进度），不重建整图，
+    // 避免并发日志/进度高频重绘导致 SMIL 闪烁。节点状态切换仍走 renderSteps（签名已变）。
+    function updateNodeSub(node) {
+      const g = elSteps.querySelector('g[data-node="' + node + '"]');
+      if (!g) return;
+      const txt = subOf(node) || "";
+      const t = g.querySelector(".node-sub");
+      if (t) { t.textContent = txt; }
+      else if (txt) { renderSteps(); }  // 罕见：此前无子文案，重建一次补齐
+    }
+    function setStatus(status) {
+      elStatus.className = "status " + status;
+      elStatus.textContent = status;
+    }
+    function finishView(status, verdict, summary, llm, error) {
+      setStatus(status);
+      if (status === "done") {
+        document.getElementById("summary").style.display = "";
+        document.getElementById("dlBtn").style.display = "";
+        document.getElementById("sVerdict").textContent = verdict || "—";
+        document.getElementById("sP0").textContent = (summary || {}).p0 || 0;
+        document.getElementById("sP1").textContent = (summary || {}).p1 || 0;
+        document.getElementById("sTotal").textContent = (summary || {}).total || 0;
+        document.getElementById("sTests").textContent = (summary || {}).tests || 0;
+        document.getElementById("sLlm").textContent = (llm || {}).label || "—";
+        elHint.textContent = "";
+      } else if (status === "error") {
+        document.getElementById("errBox").innerHTML =
+          `<div class="err-box">${(error || "评审失败").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]))}</div>`;
+        elHint.textContent = "评审失败";
+      }
+    }
+
+    // 报告正文：逐块追加，块间留一点间隔，避免服务端一次性下发时"啪"地整页出现
+    const chunkQueue = [];
+    let chunkTimer = null;
+    function pumpChunks() {
+      if (!chunkQueue.length) { chunkTimer = null; return; }
+      appendReport(chunkQueue.shift().html || "");
+      chunkTimer = setTimeout(pumpChunks, 90);
+    }
+    function enqueueReport(d) {
+      if (d.index !== nextChunk) return;   // 断序（重连补发）忽略，快照已包含全文
+      nextChunk += 1;
+      chunkQueue.push(d);
+      if (!chunkTimer) pumpChunks();
+    }
+    function appendReport(html) {
+      const cursor = document.createElement("span");
+      cursor.className = "cursor";
+      cursor.id = "cursor";
+      const old = document.getElementById("cursor");
+      if (old) old.remove();
+      const holder = document.createElement("div");
+      holder.innerHTML = html;
+      elReport.appendChild(holder);
+      elReport.appendChild(cursor);
+    }
+    function dropCursor() {
+      const c = document.getElementById("cursor");
+      if (c) c.remove();
+    }
+
+    let es = null;
+    function connect() {
+      es = new EventSource(`/api/jobs/${JOB_ID}/stream`);
+
+      es.addEventListener("snapshot", (e) => {
+        const d = JSON.parse(e.data);
+        setStatus(d.status);
+        window.__llm = d.llm || window.__llm || {};
+        seenSteps = [];
+        Object.keys(stepState).forEach((k) => delete stepState[k]);
+        Object.keys(liveProg).forEach((k) => delete liveProg[k]);
+        liveNode = null; liveT0 = 0;
+        lastStepsSig = "";   // 重连后强制重绘 DAG（否则签名闸门可能误判为无变化而跳过）
+        // 日志：全量重画（断线重连后不会重复）
+        elLog.innerHTML = ""; logCount = 0; logLines = [];
+        const snapSteps = d.steps || [];
+        appendLog(snapSteps);
+        // 重连后按日志里的 [步骤N.M] 还原步骤条，否则六步会整排消失
+        const seenN = new Set();
+        snapSteps.forEach((ln) => {
+          const m = /^\[步骤(\d+)\./.exec(ln || "");
+          if (m) seenN.add(Number(m[1]));
+        });
+        const running0 = d.status !== "done" && d.status !== "error";
+        const sortedN = Array.from(seenN).sort((a, b) => a - b);
+        sortedN.forEach((n, i) => {
+          const node = (STEP_ORDER[n - 1] || [])[0];
+          if (!node || seenSteps.includes(node)) return;
+          seenSteps.push(node);
+          // 实时流出的日志意味着"正在跑的那一步"也会有行，故最后一步视为进行中
+          const isLast = i === sortedN.length - 1;
+          stepState[node] = isLast && running0 ? "running" : "done";
+          if (isLast && running0) liveNode = node;
+        });
+        // 还原步骤 2 各章子节点（服务端 seen_nodes）：仅靠 [步骤N.M] 日志只能还原到「步骤2」这一层，
+        // 子节点（static_review_ch_*）必须从节点清单恢复，否则重连后 DAG 里只剩一个「② 静态审查」框。
+        (d.nodes || []).forEach((node) => {
+          if (seenSteps.includes(node)) return;
+          seenSteps.push(node);
+          stepState[node] = "done";   // 已完成节点正确显示绿色；下面用 node_states 精确修正
+        });
+        // 按服务端记录的节点级真实状态精确上色：排队中/进行中/失败不再被一律
+        // 染成绿色 —— 这是「重进页面后颜色即真实进度」的关键
+        const snapStates = d.node_states || {};
+        Object.keys(snapStates).forEach((node) => {
+          const st = snapStates[node];
+          if (!st) return;
+          if (!seenSteps.includes(node)) seenSteps.push(node);
+          stepState[node] = st === "start" ? "running" : st;
+        });
+        // 还原子节点中文标题（服务端 node_labels），否则重连后章节框只显示节点 slug
+        Object.keys(d.labels || {}).forEach((node) => { subLabel[node] = d.labels[node]; });
+        if (d.report_html) {
+          elReport.innerHTML = d.report_html;
+          nextChunk = Number.POSITIVE_INFINITY;   // 已有全文，后续块忽略
+        }
+        // 恢复跳过的步骤原因
+        const skipReasons = d.skip_reasons || {};
+        Object.keys(skipReasons).forEach((node) => {
+          stepState[node + ":skip"] = skipReasons[node];
+        });
+        // 还原进度条位置（最后一个有进度的节点即当前节点）
+        const snapProg = d.progress || {};
+        Object.keys(snapProg).forEach((node) => {
+          const p = snapProg[node] || {};
+          liveProg[node] = { current: p.current, total: p.total, label: p.label || "" };
+          if (running0) liveNode = node;
+        });
+        if (liveNode && running0) liveT0 = Date.now();   // 重连后计时从当下续起
+        renderSteps();
+        renderLive();
+        if (d.status === "done" || d.status === "error") {
+          finishView(d.status, d.verdict, d.summary, d.llm, d.error);
+        } else {
+          elHint.textContent = "评审进行中，内容实时刷新…";
+        }
+      });
+
+      es.addEventListener("step", (e) => {
+        const d = JSON.parse(e.data);
+        if (!seenSteps.includes(d.node)) { seenSteps.push(d.node); stepState[d.node] = d.phase; }
+        else if (d.phase !== "start") stepState[d.node] = d.phase;
+        if (d.label) subLabel[d.node] = d.label;   // 章节节点名由规约数据决定，取服务端下发的
+        if (d.phase === "done") stepState[d.node + ":ms"] = d.elapsed_ms;
+        // 记录跳过原因
+        if (d.skip_reason) {
+          stepState[d.node + ":skip"] = d.skip_reason;
+        }
+        // 节点开始：切换进度条到该节点并重新计时
+        if (d.phase === "start") {
+          // 步骤 2 的六个维度节点是并发起跑的，同组内的后续 start 不重置计时
+          const prevGroup = liveNode ? groupOf(liveNode) : null;
+          if (groupOf(d.node) !== prevGroup) liveT0 = Date.now();
+          liveNode = d.node;
+          delete liveProg[d.node];
+        }
+        // 服务端的 lines 是本次节点的新增日志，直接追加即可；
+        // 断线重连会先收到 snapshot 全量，不会重复
+        appendLog(d.lines || []);
+        renderSteps();
+        renderLive();
+      });
+
+      // 实时通道：节点执行中逐条流出，长节点不再"黑屏"
+      es.addEventListener("live", (e) => {
+        const d = JSON.parse(e.data);
+        if (!seenSteps.includes(d.node)) { seenSteps.push(d.node); stepState[d.node] = "running"; }
+        if (d.step_label) subLabel[d.node] = d.step_label;
+        if (d.type === "log") {
+          // 单行即时追加（服务端不会再在 done 里重复下发该行）
+          appendLog([d.line]);
+          if (d.text) elLiveAction.textContent = d.text;
+          if (d.skip_reason) stepState[d.node + ":skip"] = d.skip_reason;
+          if (!liveNode) { liveNode = d.node; if (!liveT0) liveT0 = Date.now(); }
+          renderSteps();
+        } else if (d.type === "progress") {
+          liveProg[d.node] = { current: d.current, total: d.total, label: d.label || "" };
+          // 各章并发时进度来自不同节点，切到最新那一章即可（renderLive 会按组聚合）
+          liveNode = d.node;
+          if (!liveT0) liveT0 = Date.now();
+          if (d.label) elLiveAction.textContent = d.label;
+          // 就地更新该节点 i/N，不重建整图（否则 SMIL 动画反复重启、闪烁）
+          updateNodeSub(d.node);
+        } else if (d.type === "node_state") {
+          // 并发度受限：抢不到额度的章节推 waiting（排队色），拿到额度推 running。
+          // 只影响该节点自身的颜色/子文案，不重建整图之外的其它节点。
+          stepState[d.node] = d.state === "waiting" ? "waiting" : "running";
+          if (!seenSteps.includes(d.node)) seenSteps.push(d.node);
+          if (d.text) elLiveAction.textContent = d.text;
+          if (!liveNode) { liveNode = d.node; if (!liveT0) liveT0 = Date.now(); }
+          renderSteps();
+        }
+        renderLive();
+      });
+
+      es.addEventListener("report", (e) => {
+        enqueueReport(JSON.parse(e.data));
+      });
+
+      const close = () => { if (es) { es.close(); es = null; } };
+      es.addEventListener("done", (e) => {
+        const d = JSON.parse(e.data);
+        dropCursor();
+        liveNode = null;            // 收起实时进度条
+        elLiveBar.hidden = true;
+        finishView("done", d.verdict, d.summary, window.__llm || {}, null);
+        close();
+      });
+      es.addEventListener("error", (e) => {
+        // EventSource 自身的连接错误没有 data；评审失败事件带 data
+        if (e.data) {
+          const d = JSON.parse(e.data);
+          dropCursor();
+          liveNode = null;
+          elLiveBar.hidden = true;
+          finishView("error", null, null, null, d.error);
+        }
+        close();
+      });
+      return es;
+    }
+
+    connect();
+
+    // 再次评审：历史报告保留，新评审另开一条记录
+    document.getElementById("rerunBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("rerunBtn");
+      if (!confirm(`确认对「${decodeURIComponent(SLUG)}」再次评审？将重新采集 diff 并运行测试；历史报告会保留。`)) return;
+      btn.disabled = true; btn.textContent = "启动中…";
+      try {
+        const res = await fetch("/api/projects/" + encodeURIComponent(decodeURIComponent(SLUG)) + "/run", { method: "POST" });
+        const d = await res.json();
+        if (!res.ok) {
+          alert("启动失败：" + (d.detail || "未知错误"));
+          btn.disabled = false; btn.textContent = "再次评审";
+          return;
+        }
+        location.href = "/report/" + encodeURIComponent(decodeURIComponent(SLUG)) + "/" + d.job_id;
+      } catch (err) {
+        alert("请求异常：" + err.message);
+        btn.disabled = false; btn.textContent = "再次评审";
+      }
+    });
+
+    document.getElementById("delBtn").addEventListener("click", async () => {
+      if (!confirm("确认删除这份评审报告？此操作不可恢复。")) return;
+      const btn = document.getElementById("delBtn");
+      btn.disabled = true; btn.textContent = "删除中…";
+      try {
+        const res = await fetch("/api/runs/" + encodeURIComponent(JOB_ID), { method: "DELETE" });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { alert("删除失败：" + (d.detail || "未知错误")); btn.disabled = false; btn.textContent = "删除此报告"; return; }
+        // 跳回首页，避免停留在已删除的报告页
+        location.href = "/";
+      } catch (err) {
+        alert("请求异常：" + err.message);
+        btn.disabled = false; btn.textContent = "删除此报告";
+      }
+    });
+  </script>
+</body>
+</html>

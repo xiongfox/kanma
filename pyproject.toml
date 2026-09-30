@@ -1,0 +1,43 @@
+[project]
+name = "kanma"
+version = "0.1.0"
+description = "勘码 KanMa - 企业级代码 Review Agent（diff 静态审查 + 沙箱测试验证）"
+requires-python = ">=3.13"
+
+dependencies = [
+    "pydantic>=2.9",
+    "pydantic-settings>=2.5",
+    "langgraph>=0.2.50",
+    "langchain-core>=0.3.30",
+    "langchain-openai>=0.2.10",
+    "pyyaml>=6.0",
+    "jinja2>=3.1",
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    "markdown>=3.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.8",
+    "httpx>=0.28",
+]
+
+[project.scripts]
+kanma = "kanma.cli:main"
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# 内置规约（评审知识库）：目录名含连字符、非 Python 包，需显式声明随包分发
+[tool.setuptools.package-data]
+"kanma.rules" = ["data/**/*.md", "data/**/*.yaml", "data/**/*.yml"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"

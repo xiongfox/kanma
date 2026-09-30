@@ -1,0 +1,31 @@
+# 勘码评审项目配置示例
+# 对应 AGENTS.MD 第 3 节：源码信息（必填）+ 需求开发文档（缺失走降级路径）
+
+name: demo-order-service
+
+# 源码工程列表：一个项目可包含多个工程，各自独立指定 git 地址 / 分支 / 时间窗
+repos:
+  - name: order-service
+    git_url: https://github.com/example/demo-order-service.git
+    branch: feature/order-discount
+    # base: origin/main        # 对比基线，缺省则按时间窗内首个 commit 起算
+    start_time: "2026-08-01T00:00:00"
+    end_time: "2026-08-31T23:59:59"
+
+  - name: pay-service
+    git_url: https://github.com/example/demo-pay-service.git
+    branch: feature/pay-refund
+    start_time: "2026-08-10T00:00:00"
+    end_time: "2026-08-31T23:59:59"
+
+# 需求开发文档：第 3 步生成测试用例、HR-04 需求对齐的验收基准
+requirement_doc: docs/requirement.example.md
+
+# 勘码工作区：克隆的仓库与临时测试代码都在此，绝不污染源码树（HR-03）
+workdir: .kanma
+
+# 可选：覆盖默认的源码扩展名白名单与排除路径
+# source_extensions: [".java", ".py", ".go"]
+# exclude_globs:
+#   - "**/target/**"
+#   - "**/*_test.go"
